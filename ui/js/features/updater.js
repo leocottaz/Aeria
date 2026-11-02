@@ -4,7 +4,6 @@ import { $, store, toast } from '../core/util.js';
 import { bridge, send } from '../core/bridge.js';
 import { settings, setSetting } from '../core/settings.js';
 
-const API = 'https://api.github.com/repos/leocottaz/ShadowAssistant/releases/latest';
 const RELEASES_API = 'https://api.github.com/repos/leocottaz/ShadowAssistant/releases';
 const RELEASES ='https://github.com/leocottaz/ShadowAssistant/releases';
 const CHECK_EVERY = 6 * 3600 * 1000;
@@ -58,12 +57,17 @@ async function check({ manual = false } = {}) {
   }
   if (manual) setStatus('Recherche en cours…');
   try {
-    const res = await fetch(API, { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
-    if (res.status === 404) { if (manual) setStatus('Aucune version publiée pour le moment.'); return; }
+    // La liste, pas `releases/latest` : GitHub y met la plus récente publiée, même un tag de test
+    // (v0.3.1-dev) qu'on ignore ; on veut la plus haute version stable.
+    const res = await fetch(`${RELEASES_API}?per_page=30`, { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const r = await res.json();
     store.set('updateLastCheck', Date.now());
-    if (r.draft || r.prerelease || !parseVersion(r.tag_name)) { if (manual) setStatus('Tu as la dernière version.'); return; }
+    let r = null;
+    for (const c of await res.json()) {
+      if (c.draft || c.prerelease || !parseVersion(c.tag_name)) continue;
+      if (!r || isNewer(c.tag_name, r.tag_name)) r = c;
+    }
+    if (!r) { if (manual) setStatus('Aucune version publiée pour le moment.'); return; }
     const version = r.tag_name.replace(/^v/, '');
     U.latest = { tag: r.tag_name, version, url: r.html_url || RELEASES };
     if (isNewer(r.tag_name, U.version)) {
