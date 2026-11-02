@@ -90,3 +90,5 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+          # v0.3.1-dev… : version de test, jamais « dernière release » (l'updater ne retient que vX.Y.Z).
+          prerelease: ${{ contains(github.ref_name, '-') }}
