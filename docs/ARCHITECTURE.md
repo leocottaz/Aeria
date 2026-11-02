@@ -135,7 +135,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 
 | `t` | Champs | Sens |
 | --- | --- | --- |
-| `init` | `hasKey`, `keyHint`, `autostart`, `lowMemory`, `freeKeys`, `version`, `canUpdate` | Réponse à `ready`. `version` : numéro de l'exécutable (`0.0.0` = build de développement). `canUpdate` : copie installée par `Setup.exe`. |
+| `init` | `hasKey`, `keyHint`, `autostart`, `lowMemory` (Windows), `freeKeys`, `version`, `canUpdate` | Réponse à `ready`. Sans `lowMemory`, la page garde son réglage. `version` : numéro de l'exécutable (`0.0.0` = build de développement). `canUpdate` : copie installée par `Setup.exe`. |
 | `update` | `state` (`downloading`, `verifying`, `installing`, `restarting`, `error`), `pct`, `msg` | Avancement d'une mise à jour. Sur `restarting`, la page envoie `quit` : l'installateur relance le dock. |
 | `freekey` | `service`, `ok`, `freeKeys` | Résultat de `freekey` / `delfreekey`. |
 | `state` | `s`, `delay`, `pinned` | Nouvel état du dock. |
@@ -180,7 +180,9 @@ Cible séparée : `cmake/linux.cmake` (GTK3, WebKitGTK, libcurl, X11). Les modul
 | `util_linux.cpp` | Dossiers XDG, dossier de l'exécutable. (`common/util.cpp`) |
 | `host.h` | Petite interface entre `bridge_linux`/`pc_linux`/`tray_linux` et la fenêtre GTK. |
 
-**Page** : `ui/js/core/bridge.js` détecte `window.webkit.messageHandlers.shadow` ; le natif répond en appelant `window.__fromNative(json)`. Il ajoute la classe `linux` à `<html>` (fond opaque, voir `base.css`).
+**Page** : `ui/js/core/bridge.js` détecte `window.webkit.messageHandlers.shadow` ; le natif répond en appelant `window.__fromNative(json)`. Il ajoute la classe `linux` à `<html>` (pas d'évasements, molette gérée par la page). La fenêtre est transparente : le verre arrondi est `.ambient`, comme sous Windows.
+
+**Souris sous Wayland** : XWayland ne connaît la position que lorsque le curseur survole une de nos fenêtres. `dock_linux.cpp` pose une bande invisible de 1 px en haut de chaque écran (`RebuildEdges`) et suit les entrées/sorties (`PointerKnown`) ; hors de nos fenêtres, la position est ignorée. Sous X11, le pointeur global suffit.
 
 **Interface servie en `shadow://app/…`**, pas en `file://` : WebKit refuse les modules JavaScript chargés depuis `file://`. `ServeUi` ne sert que `ui/` (chemins normalisés, pas de sortie du dossier). Équivalent de `https://shadow.local/` avec WebView2.
 

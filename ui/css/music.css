@@ -315,5 +315,4 @@ body.tint-music.has-music {
   --accent: var(--m-accent, var(--m-tint)); /* teinte bornée (music.js, accentFrom) : texte blanc des boutons lisible */
   --accent2: var(--m-accent2, var(--m-tint));
 }
-html:not(.linux) body.tint-music.has-music:not(.preview) .ambient { background: color-mix(in srgb, var(--m-tint) 16%, var(--glass-fill)); }
-html.linux body.tint-music.has-music.theme-dark { background: color-mix(in srgb, var(--m-tint) 14%, rgba(18, 18, 28, .93)); }
+body.tint-music.has-music:not(.preview) .ambient { background: color-mix(in srgb, var(--m-tint) 16%, var(--glass-fill)); }

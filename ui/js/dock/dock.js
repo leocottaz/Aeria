@@ -137,11 +137,30 @@ function setupBar() {
   $('#pill').addEventListener('click', (e) => openTab(e.target.closest('#pillTimer') ? 'timer' : alertTab() || miniTab()));
 }
 
+// Zone défilante sous la souris : la plus proche qui a vraiment quelque chose à faire défiler.
+function scrollerAt(el) {
+  for (; el && el !== document.body; el = el.parentElement) {
+    const overflow = getComputedStyle(el).overflowY;
+    if ((overflow === 'auto' || overflow === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+  }
+  return null;
+}
+
 function setupGlobal() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { send('hide'); return; }
     if (e.ctrlKey && !e.altKey && /^[1-6]$/.test(e.key)) { e.preventDefault(); openTab(NAV_TABS[+e.key - 1]); }
   });
+  // Linux : sous KDE, la molette ne défilait pas dans WebKitGTK. Écouter sans « passive » la fait
+  // passer par la page, et on déplace la zone nous-mêmes au lieu de dépendre du défilement de WebKit.
+  if (document.documentElement.classList.contains('linux')) {
+    window.addEventListener('wheel', (e) => {
+      const box = scrollerAt(e.target);
+      if (!box || e.ctrlKey) return;
+      e.preventDefault();
+      box.scrollTop += e.deltaMode === WheelEvent.DOM_DELTA_LINE ? e.deltaY * 40 : e.deltaY;
+    }, { passive: false });
+  }
   // reflet spéculaire qui suit la souris sur les surfaces de verre
   document.addEventListener('pointermove', (e) => {
     const g = e.target.closest?.('.glass');

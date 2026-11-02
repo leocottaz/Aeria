@@ -3,9 +3,9 @@
 /* ------------------------------------------------------------------ ambiance */
 
 .ambient { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
-/* Windows : .ambient est le verre lui-même (fond + halo), découpé par un masque : corps au bas arrondi
-   (18 px) plus un évasement concave de chaque côté. Les évasements portent ainsi le même halo. */
-html:not(.linux) body:not(.preview) .ambient {
+/* .ambient est le verre lui-même (fond + halo), découpé par un masque : corps au bas arrondi (18 px)
+   plus un évasement concave de chaque côté (Windows). Les évasements portent ainsi le même halo. */
+body:not(.preview) .ambient {
   --r: 18px;
   inset: auto;
   top: 0;
@@ -454,5 +454,5 @@ kbd {
 }
 
 /* Languette et progression : verre très bas, coins bas plus petits (le trait de progression ne dépasse pas). */
-html:not(.linux) body.st-progress:not(.preview) .ambient,
-html:not(.linux) body.st-peek:not(.preview) .ambient { --r: 4px; }
+body.st-progress:not(.preview) .ambient,
+body.st-peek:not(.preview) .ambient { --r: 4px; }

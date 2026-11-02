@@ -74,13 +74,9 @@ body {
   cursor: default;
 }
 
-/* Linux : pas d'acrylique, donc un fond opaque et le bas arrondi (le haut dépasse de l'écran). */
-html.linux body { background: rgba(18, 18, 28, .93); border-radius: 0 0 18px 18px; }
-html.linux body.theme-light { background: rgba(244, 245, 251, .94); }
-
-/* Windows : plus d'acrylique (il remplit le rectangle de la fenêtre et ne peut pas être découpé).
-   Le verre est dessiné par la page : .ambient (dock.css), avec ses bords évasés vers l'écran.
-   Taille du verre par état : --shell-w/--shell-h ; --fl = évasement (nul pour la languette). */
+/* Pas d'acrylique (il remplit le rectangle de la fenêtre et ne peut pas être découpé) : la fenêtre est
+   transparente et le verre est dessiné par la page, .ambient (dock.css), au bas arrondi. Windows y ajoute
+   des bords évasés vers l'écran. Taille du verre par état : --shell-w/--shell-h ; --fl = évasement. */
 html.linux, html:has(body.preview) { --flare: 0px; --flare-pad: 0px; }
 
 body { --shell-w: var(--dock-w); --shell-h: calc(var(--bar-h) + var(--panel-h)); --fl: var(--flare); }
@@ -91,8 +87,8 @@ body.st-mini { --shell-w: var(--mini-w, 320px); --shell-h: var(--mini-h); }
 body.st-music { --shell-w: var(--mcard-w); --shell-h: var(--mcard-h); }
 body.st-bar { --shell-h: var(--bar-h); }
 
-/* Voile teinté par-dessus l'acrylique pour la profondeur */
-html:not(.linux) body:not(.preview)::before { display: none; }
+/* Voile teinté pour la profondeur, seulement dans l'aperçu : dans le dock, il sortirait du verre arrondi */
+body:not(.preview)::before { display: none; }
 body::before {
   content: "";
   position: fixed;

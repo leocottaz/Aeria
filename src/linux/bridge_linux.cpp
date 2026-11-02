@@ -51,13 +51,13 @@ void HandleMessage(const std::string& msg) {
 
     if (cmd == "ready") {
         PostToPage("{\"t\":\"init\"," + api_key::StatusJson() + ",\"autostart\":" + (autostart::Enabled() ? "true" : "false") +
-                   ",\"lowMemory\":false," + api_key::FreeStatusJson() + ",\"version\":" + util::Json(updater::Version()) +
+                   "," + api_key::FreeStatusJson() + ",\"version\":" + util::Json(updater::Version()) +
                    ",\"canUpdate\":" + (updater::CanSelfUpdate() ? "true" : "false") + "}");
         dock::OnPageReady();
     } else if (cmd == "config") {
         dock::ApplyConfig(arg);
     } else if (cmd == "lowmem") {
-        // Mode économie de mémoire : propre à WebView2, sans équivalent ici.
+        // Mode économie de mémoire : propre à WebView2, sans équivalent ici. Le réglage reste dans la page.
     } else if (cmd == "bar") {
         dock::ShowBar();
     } else if (cmd == "pin") {

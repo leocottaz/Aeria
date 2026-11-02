@@ -5,7 +5,7 @@ Dock en verre (acrylique Windows 11) qui descend du haut de l'écran : rappels, 
 Hôte natif **C++20** + interface **HTML/CSS/JS**, sans dépendance JavaScript ni étape de build web. Deux plateformes :
 
 - **Windows** : Win32 + **WebView2**, fond acrylique.
-- **Linux** (X11 / XWayland) : **GTK3 + WebKitGTK**, fond opaque dessiné par la page.
+- **Linux** (X11 / XWayland) : **GTK3 + WebKitGTK**, verre dessiné par la page sur une fenêtre transparente.
 
 ## Télécharger
 
@@ -80,7 +80,7 @@ cmake --build build-deb && (cd build-deb && cpack -G DEB)
 
 - **Ctrl+Alt+Espace** : ouvrir / fermer le panneau. **Échap** : replier. **Ctrl+1…6** : changer d'onglet.
 - Icône dans la zone de notification : clic = ouvrir, clic droit = menu (garder affiché, réglages, quitter).
-- Linux : mêmes fonctions, avec trois différences — pas de flou du bureau (fond opaque), pas de détection du plein écran, et la recherche de fichiers parcourt ton dossier personnel (noms de fichiers seulement). Les clés API sont dans `~/.config/ShadowAssistant` (fichiers lisibles par toi seul).
+- Linux : mêmes fonctions, avec trois différences — pas de flou du bureau, pas de détection du plein écran, et la recherche de fichiers parcourt ton dossier personnel (noms de fichiers seulement). Les clés API sont dans `~/.config/ShadowAssistant` (fichiers lisibles par toi seul).
 - Réglages → Comportement : mode **Masqué** (barre de progression au bord haut, durée réglable) ou **Languette**.
 - Rappels : texte libre en français (« appeler Paul demain à 14h », « dans 20 min »), répétitions, notification Windows.
 - Claude, trois modes de connexion (Réglages → Maya → Connexion) :

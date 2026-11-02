@@ -1,9 +1,8 @@
 // Le dock sous Linux (GTK3, X11 ou XWayland) : mêmes états que app/dock.cpp (masqué, progression,
 // languette, mini, musique, barre, panneau), mêmes animations et même protocole vers la page.
-// Différences : pas d'acrylique (la page dessine son propre fond, voir html.linux dans base.css),
-// pas de détection du plein écran, pas d'icône de zone de notification, et le raccourci global
-// (Ctrl+Alt+Espace) et le bord haut ne marchent que sous X11/XWayland — Wayland ne permet ni de
-// lire la souris hors de nos fenêtres ni de capter une touche globale.
+// Différences : pas d'évasements, pas de détection du plein écran, et le raccourci global
+// (Ctrl+Alt+Espace) ne marche que sous X11 — Wayland ne permet pas de capter une touche globale.
+// La souris : voir « souris sous XWayland » plus bas.
 #include "app/dock.h"
 
 #include "app/autostart.h"
@@ -22,6 +21,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <vector>
 
 namespace dock {
 namespace {
@@ -89,6 +89,10 @@ int g_miniW = 0;
 int g_musicW = 380;
 guint g_animSource = 0;
 KeyCode g_hotkeyCode = 0;
+bool g_xwayland = false; // session Wayland : on tourne dans XWayland (voir « souris sous XWayland »)
+bool g_overDock = false;
+bool g_onEdge = false;
+std::vector<GtkWidget*> g_edges;
 
 gint64 NowMs() { return g_get_monotonic_time() / 1000; }
 
@@ -128,6 +132,54 @@ bool AnyMonitorContains(int x, int y) {
 }
 
 GdkMonitor* MonitorAt(int x, int y) { return gdk_display_get_monitor_at_point(GdkDisp(), x, y); }
+
+// ------------------------------------------------------------------ souris sous XWayland
+
+// Sous Wayland (Plasma, GNOME), une appli XWayland ne voit la souris que lorsqu'elle survole une de
+// ses fenêtres : ailleurs, la position lue reste figée à la dernière connue. Une bande invisible de
+// 1 px en haut de chaque écran signale donc l'arrivée au bord, et les entrées/sorties disent si la
+// position est encore valable. Sous X11, le pointeur global suffit.
+bool PointerKnown() { return !g_xwayland || g_overDock || g_onEdge; }
+
+gboolean OnCrossing(GtkWidget*, GdkEventCrossing* e, gpointer flag) {
+    if (e->detail != GDK_NOTIFY_INFERIOR) *static_cast<bool*>(flag) = e->type == GDK_ENTER_NOTIFY;
+    return FALSE;
+}
+
+void WatchCrossing(GtkWidget* w, bool* flag) {
+    gtk_widget_add_events(w, GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK);
+    g_signal_connect(w, "enter-notify-event", G_CALLBACK(OnCrossing), flag);
+    g_signal_connect(w, "leave-notify-event", G_CALLBACK(OnCrossing), flag);
+}
+
+gboolean DrawNothing(GtkWidget*, cairo_t* cr, gpointer) {
+    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_rgba(cr, 0, 0, 0, 0);
+    cairo_paint(cr);
+    return TRUE;
+}
+
+// Une bande par écran sans voisin au-dessus, de la largeur du dock.
+void RebuildEdges() {
+    if (!g_xwayland) return;
+    for (GtkWidget* e : g_edges) gtk_widget_destroy(e);
+    g_edges.clear();
+    g_onEdge = false;
+    for (int i = 0; i < gdk_display_get_n_monitors(GdkDisp()); ++i) {
+        Rect m = GeometryOf(gdk_display_get_monitor(GdkDisp(), i));
+        int cx = (m.l + m.r) / 2;
+        if (AnyMonitorContains(cx, m.t - 1)) continue;
+        GtkWidget* edge = gtk_window_new(GTK_WINDOW_POPUP); // hors gestionnaire de fenêtres : ni focus, ni placement imposé
+        gtk_widget_set_app_paintable(edge, TRUE);
+        if (GdkVisual* rgba = gdk_screen_get_rgba_visual(gtk_widget_get_screen(edge))) gtk_widget_set_visual(edge, rgba);
+        g_signal_connect(edge, "draw", G_CALLBACK(DrawNothing), nullptr);
+        WatchCrossing(edge, &g_onEdge);
+        gtk_window_set_default_size(GTK_WINDOW(edge), g_cfg.width, 1);
+        gtk_window_move(GTK_WINDOW(edge), cx - g_cfg.width / 2, m.t);
+        gtk_widget_show(edge);
+        g_edges.push_back(edge);
+    }
+}
 
 Rect TargetRect(State s) {
     Rect m = GeometryOf(Monitor());
@@ -200,7 +252,10 @@ gboolean AnimStep(gpointer) {
     if (t >= 1.0) {
         g_anim.active = false;
         PlaceWindow(g_anim.to);
-        if (g_state == State::Hidden) gtk_widget_hide(g_window);
+        if (g_state == State::Hidden) {
+            gtk_widget_hide(g_window);
+            g_overDock = false; // cachée sous la souris : aucune sortie ne sera signalée
+        }
         g_animSource = 0;
         return G_SOURCE_REMOVE;
     }
@@ -229,7 +284,7 @@ void SetState(State s, bool force = false) {
         int x, y;
         bool down;
         Pointer(x, y, down);
-        g_monitor = MonitorAt(x, y); // raccourci, rappel : on sort là où est la souris
+        if (PointerKnown()) g_monitor = MonitorAt(x, y); // raccourci, rappel : on sort là où est la souris
         PlaceWindow(TargetRect(State::Hidden));
         gtk_widget_show_all(g_window);
         media::Command("refresh");
@@ -268,7 +323,12 @@ gboolean Poll(gpointer) {
     int px, py;
     bool mouseDown;
     Pointer(px, py, mouseDown);
-    FollowMouse(px, py);
+    if (PointerKnown()) {
+        FollowMouse(px, py);
+    } else { // position périmée : la souris est ailleurs, loin du dock
+        px = py = -1000000;
+        mouseDown = false;
+    }
     Rect m = GeometryOf(Monitor());
     int cx = (m.l + m.r) / 2, half = g_cfg.width / 2;
     bool fullscreen = ForegroundIsFullscreen();
@@ -379,6 +439,15 @@ void Init(void* window, void* layout, void* view) {
                      nullptr);
     InstallHotkey();
     tray::Init();
+    g_xwayland = GDK_IS_X11_DISPLAY(GdkDisp()) && g_getenv("WAYLAND_DISPLAY");
+    if (g_xwayland) {
+        WatchCrossing(g_window, &g_overDock);
+        RebuildEdges();
+        GCallback rebuild = G_CALLBACK(+[]() { RebuildEdges(); });
+        g_signal_connect(GdkDisp(), "monitor-added", rebuild, nullptr);
+        g_signal_connect(GdkDisp(), "monitor-removed", rebuild, nullptr);
+        g_signal_connect(gdk_display_get_default_screen(GdkDisp()), "monitors-changed", rebuild, nullptr);
+    }
     g_timeout_add(30, Poll, nullptr);
     g_timeout_add_seconds(1, +[](gpointer) -> gboolean {
         reminders::Check(); // échéances des rappels et du minuteur
@@ -416,8 +485,10 @@ void ApplyConfig(const std::string& payload) {
         else if (k == "miniLyrics") c.miniLyrics = v == "1";
     }
     bool geometryChanged = c.mode != g_cfg.mode || c.width != g_cfg.width || c.panelH != g_cfg.panelH;
+    bool widthChanged = c.width != g_cfg.width;
     g_cfg = c;
     if (wantAutostart != autostartOn) autostart::Set(wantAutostart);
+    if (widthChanged) RebuildEdges();
     if (geometryChanged) {
         if (IsResting(g_state)) SetState(RestState(), true);
         else AnimateTo(TargetRect(g_state), 300, false);

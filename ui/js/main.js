@@ -20,10 +20,10 @@ function onNative(m) {
     case 'init':
       S.hasKey = m.hasKey;
       S.keyHint = m.keyHint;
-      // Réglages gardés côté natif : c'est lui qui fait foi.
-      if (settings.autostart !== m.autostart || settings.lowMemory !== m.lowMemory) {
+      // Réglages gardés côté natif : c'est lui qui fait foi. Sous Linux, lowMemory ne vit que dans la page.
+      if (settings.autostart !== m.autostart || (m.lowMemory !== undefined && settings.lowMemory !== m.lowMemory)) {
         settings.autostart = m.autostart;
-        settings.lowMemory = m.lowMemory;
+        settings.lowMemory = m.lowMemory ?? settings.lowMemory;
         store.set('settings', settings);
       }
       S.freeKeys = m.freeKeys || {};
@@ -103,7 +103,8 @@ function init() {
     sendConfig();
     // Le natif recrée la vue avec les nouvelles options : on laisse l'interrupteur finir.
     onSettingChange((key, value) => {
-      if (key === 'lowMemory') { toast('Rechargement du dock…'); setTimeout(() => send('lowmem', value ? '1' : '0'), 450); }
+      const linux = document.documentElement.classList.contains('linux'); // là-bas, rien à recharger
+      if (key === 'lowMemory' && !linux) { toast('Rechargement du dock…'); setTimeout(() => send('lowmem', value ? '1' : '0'), 450); }
     });
     saveReminders();
     syncTimer();

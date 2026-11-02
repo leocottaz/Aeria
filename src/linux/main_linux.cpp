@@ -104,7 +104,14 @@ void Activate(GtkApplication* app, gpointer) {
     gtk_window_set_default_size(GTK_WINDOW(g_window), 1, 1);
     gtk_widget_set_app_paintable(g_window, TRUE);
     if (GdkVisual* rgba = gdk_screen_get_rgba_visual(gtk_widget_get_screen(g_window)))
-        gtk_widget_set_visual(g_window, rgba); // fenêtre transparente (le verre dépend du compositeur)
+        gtk_widget_set_visual(g_window, rgba); // fenêtre transparente : le verre arrondi est dessiné par la page
+    g_signal_connect(g_window, "draw", G_CALLBACK(+[](GtkWidget*, cairo_t* cr, gpointer) -> gboolean {
+                         cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE); // certains thèmes laissent un fond opaque
+                         cairo_set_source_rgba(cr, 0, 0, 0, 0);
+                         cairo_paint(cr);
+                         return FALSE;
+                     }),
+                     nullptr);
 
     WebKitUserContentManager* ucm = webkit_user_content_manager_new();
     g_signal_connect(ucm, "script-message-received::shadow", G_CALLBACK(OnMessage), nullptr);
