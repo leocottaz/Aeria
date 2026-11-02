@@ -139,14 +139,20 @@ function setupBar() {
 
 // Linux : la molette arrive du natif ({t:"wheel"}, dock_linux.cpp), en crans. On déplace la zone
 // défilante la plus proche de la souris qui a vraiment quelque chose à faire défiler.
-function onWheel({ x, y, dy }) {
-  for (let el = document.elementFromPoint(x, y); el && el !== document.body; el = el.parentElement) {
+function onWheel({ x, y, dy, debug }) {
+  const hit = document.elementFromPoint(x, y);
+  const name = (el) => `${el?.tagName?.toLowerCase()}#${el?.id || ''}.${String(el?.className?.baseVal ?? el?.className ?? '').split(' ')[0]}`;
+  const log = (text) => { if (debug) send('log', `${S.st}/${S.tab} sous la souris ${name(hit)} : ${text}`); };
+  for (let el = hit; el && el !== document.body; el = el.parentElement) {
     const overflow = getComputedStyle(el).overflowY;
     if ((overflow === 'auto' || overflow === 'scroll') && el.scrollHeight > el.clientHeight) {
+      const before = el.scrollTop;
       el.scrollTop += dy * 40;
+      log(`${name(el)} ${el.clientHeight}/${el.scrollHeight} scrollTop ${before} -> ${el.scrollTop}`);
       return;
     }
   }
+  log('aucune zone défilante');
 }
 
 function setupGlobal() {

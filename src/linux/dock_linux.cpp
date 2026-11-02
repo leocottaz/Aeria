@@ -261,7 +261,10 @@ bool ForwardScroll(GdkEvent* e) {
     int viewLeft = (g_rect.w() - g_cfg.width) / 2;
     int x = (int)e->scroll.x_root - ox - viewLeft, y = (int)e->scroll.y_root - oy;
     if (g_debug) g_printerr("[molette] sens=%d dy=%.3f page=%d,%d\n", (int)e->scroll.direction, dy, x, y);
-    bridge::PostToPage("{\"t\":\"wheel\",\"x\":" + std::to_string(x) + ",\"y\":" + std::to_string(y) + ",\"dy\":" + std::to_string(dy) + "}");
+    char delta[G_ASCII_DTOSTR_BUF_SIZE]; // toujours un point décimal, quelle que soit la langue du système
+    g_ascii_formatd(delta, sizeof delta, "%.3f", dy);
+    bridge::PostToPage("{\"t\":\"wheel\",\"x\":" + std::to_string(x) + ",\"y\":" + std::to_string(y) + ",\"dy\":" + delta +
+                       ",\"debug\":" + (g_debug ? "true" : "false") + "}");
     return true;
 }
 
