@@ -442,7 +442,6 @@ kbd {
   overflow-y: auto;
   -webkit-mask-image: linear-gradient(transparent, #000 10px, #000 calc(100% - 14px), transparent);
 }
-html.linux .scroll { -webkit-mask-image: none; } /* à confirmer sous KDE : le défilement n'y apparaissait pas */
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-thumb { border: 3px solid transparent; border-radius: 6px; background: var(--press) padding-box; }
 ::-webkit-scrollbar-thumb:hover { background: var(--fg3) padding-box; }

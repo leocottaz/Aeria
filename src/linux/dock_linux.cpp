@@ -260,7 +260,18 @@ bool ForwardScroll(GdkEvent* e) {
     gdk_window_get_origin(dock, &ox, &oy);
     int viewLeft = (g_rect.w() - g_cfg.width) / 2;
     int x = (int)e->scroll.x_root - ox - viewLeft, y = (int)e->scroll.y_root - oy;
-    if (g_debug) g_printerr("[molette] sens=%d dy=%.3f page=%d,%d\n", (int)e->scroll.direction, dy, x, y);
+    static int tracedX = -1, tracedY = -1;
+    if (g_debug && (x != tracedX || y != tracedY)) { // une trace par position, pas une par cran
+        tracedX = x, tracedY = y;
+        int realW = 0, realH = 0;
+        gtk_window_get_size(GTK_WINDOW(g_window), &realW, &realH);
+        GdkRectangle screen, work;
+        gdk_monitor_get_geometry(Monitor(), &screen);
+        gdk_monitor_get_workarea(Monitor(), &work);
+        g_printerr("[molette] sens=%d dy=%.3f page=%d,%d fenetre demandee=%dx%d a %d,%d reelle=%dx%d a %d,%d echelle=%d ecran=%dx%d utile=%dx%d\n",
+                   (int)e->scroll.direction, dy, x, y, g_rect.w(), g_rect.h(), g_rect.l, g_rect.t, realW, realH, ox, oy,
+                   gdk_window_get_scale_factor(dock), screen.width, screen.height, work.width, work.height);
+    }
     char delta[G_ASCII_DTOSTR_BUF_SIZE]; // toujours un point décimal, quelle que soit la langue du système
     g_ascii_formatd(delta, sizeof delta, "%.3f", dy);
     bridge::PostToPage("{\"t\":\"wheel\",\"x\":" + std::to_string(x) + ",\"y\":" + std::to_string(y) + ",\"dy\":" + delta +

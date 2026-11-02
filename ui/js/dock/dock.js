@@ -139,20 +139,27 @@ function setupBar() {
 
 // Linux : la molette arrive du natif ({t:"wheel"}, dock_linux.cpp), en crans. On déplace la zone
 // défilante la plus proche de la souris qui a vraiment quelque chose à faire défiler.
+let wheelTraced = null; // SHADOW_DEBUG : une trace par élément survolé, pas une par cran
 function onWheel({ x, y, dy, debug }) {
   const hit = document.elementFromPoint(x, y);
-  const name = (el) => `${el?.tagName?.toLowerCase()}#${el?.id || ''}.${String(el?.className?.baseVal ?? el?.className ?? '').split(' ')[0]}`;
-  const log = (text) => { if (debug) send('log', `${S.st}/${S.tab} sous la souris ${name(hit)} : ${text}`); };
+  if (debug && hit !== wheelTraced) {
+    wheelTraced = hit;
+    const name = (el) => `${el.tagName.toLowerCase()}#${el.id}.${String(el.className?.baseVal ?? el.className).split(' ')[0]}`;
+    const rows = [];
+    for (let el = hit; el; el = el.parentElement) {
+      const r = el.getBoundingClientRect();
+      rows.push(`${name(el)} ${el.clientHeight}/${el.scrollHeight} y=${Math.round(r.top)}-${Math.round(r.bottom)} ${getComputedStyle(el).overflowY}`);
+    }
+    const root = getComputedStyle(document.documentElement);
+    send('log', `${S.st}/${S.tab} vue=${innerWidth}x${innerHeight} panel-h=${root.getPropertyValue('--panel-h')} police=${getComputedStyle(document.body).fontFamily}\n${rows.join('\n')}`);
+  }
   for (let el = hit; el && el !== document.body; el = el.parentElement) {
     const overflow = getComputedStyle(el).overflowY;
     if ((overflow === 'auto' || overflow === 'scroll') && el.scrollHeight > el.clientHeight) {
-      const before = el.scrollTop;
       el.scrollTop += dy * 40;
-      log(`${name(el)} ${el.clientHeight}/${el.scrollHeight} scrollTop ${before} -> ${el.scrollTop}`);
       return;
     }
   }
-  log('aucune zone défilante');
 }
 
 function setupGlobal() {
