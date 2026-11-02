@@ -149,6 +149,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `media` | `active`, `app`, `title`, `artist`, `album`, `status`, `pos`, `dur`, `at`, `canNext`, `canPrev`, `canSeek`, (`art` : data URL, seulement au changement de morceau) | Musique suivie. `pos` est la position (ms) à l'instant `at` (ms epoch). |
 | `hotkey`, `show` | (`tab`) | Ouverture par raccourci ou menu de l'icône. |
 | `reply` | `id`, `ok`, (`error`, `results`, `path`) | Réponse à une commande `ask()` (`search`, `pickfile`). |
+| `wheel` | `x`, `y`, `dy` | Linux : molette, en crans, à la position (`x`, `y`) de la page. |
 
 ## Données
 
@@ -180,7 +181,9 @@ Cible séparée : `cmake/linux.cmake` (GTK3, WebKitGTK, libcurl, X11). Les modul
 | `util_linux.cpp` | Dossiers XDG, dossier de l'exécutable. (`common/util.cpp`) |
 | `host.h` | Petite interface entre `bridge_linux`/`pc_linux`/`tray_linux` et la fenêtre GTK. |
 
-**Page** : `ui/js/core/bridge.js` détecte `window.webkit.messageHandlers.shadow` ; le natif répond en appelant `window.__fromNative(json)`. Il ajoute la classe `linux` à `<html>` (pas d'évasements, molette gérée par la page). La fenêtre est transparente : le verre arrondi est `.ambient`, comme sous Windows.
+**Page** : `ui/js/core/bridge.js` détecte `window.webkit.messageHandlers.shadow` ; le natif répond en appelant `window.__fromNative(json)`. Il ajoute la classe `linux` à `<html>` (pas d'évasements, pas de marge cachée : `--inset` = `kInset` = 0, KWin refuse les positions négatives). Le verre arrondi est `.ambient`, comme sous Windows, et la fenêtre est en plus découpée par une forme X11 (`ApplyShape`).
+
+**Molette** : interceptée dans GDK (`ForwardScroll`) et remise à la page par `{t:"wheel"}` (`onWheel`). `SHADOW_DEBUG=1` affiche sur la sortie d'erreur l'environnement graphique et chaque cran reçu.
 
 **Souris sous Wayland** : XWayland ne connaît la position que lorsque le curseur survole une de nos fenêtres. `dock_linux.cpp` pose une bande invisible de 1 px en haut de chaque écran (`RebuildEdges`) et suit les entrées/sorties (`PointerKnown`) ; hors de nos fenêtres, la position est ignorée. Sous X11, le pointeur global suffit.
 

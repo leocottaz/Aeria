@@ -5,7 +5,7 @@ import { settings, sendConfig, applyAppearance, renderSettings, setupSettings, o
 import { S } from './core/state.js';
 import { checkClaudeCode, renderCc, renderKey, renderFree, testFree, onFreeKey, setupConnection } from './chat/connection.js';
 import { knownModels } from './chat/free.js';
-import { setState, switchTab, tick, setupBar, setupGlobal } from './dock/dock.js';
+import { setState, switchTab, tick, setupBar, setupGlobal, onWheel } from './dock/dock.js';
 import { fireReminder, renderReminders, saveReminders, setupReminders } from './features/reminders.js';
 import { renderNotes, setupNotes } from './features/notes.js';
 import { renderTodos, setupTodo } from './features/todo.js';
@@ -39,6 +39,7 @@ function onNative(m) {
       }
       break;
     case 'state': setState(m.s, m); break;
+    case 'wheel': onWheel(m); break;
     case 'key':
       S.hasKey = m.hasKey;
       S.keyHint = m.keyHint;

@@ -17,6 +17,7 @@
 #include <X11/keysym.h>
 #include <gdk/gdkx.h>
 #include <gtk/gtk.h>
+#include <webkit2/webkit2.h>
 
 #include <algorithm>
 #include <cmath>
@@ -29,7 +30,8 @@ namespace {
 // ------------------------------------------------------------------ constantes
 
 // Géométrie en DIP (= pixels logiques GTK). Valeurs liées à ui/css/*.css, comme sous Windows.
-constexpr int kInset = 14;
+// Pas de marge cachée au-dessus de l'écran (--inset dans base.css) : KWin ramène la fenêtre à y = 0.
+constexpr int kInset = 0;
 constexpr int kBarH = 58;
 constexpr int kTabW = 150, kTabH = 7;
 constexpr int kStripW = 300, kStripH = 6;
@@ -194,9 +196,7 @@ Rect TargetRect(State s) {
         case State::Bar: h = kInset + kBarH; break;
         case State::Panel: h = kInset + kBarH + g_cfg.panelH; break;
     }
-    int top = m.t - kInset;
-    if (s == State::Hidden) top -= 24;
-    return {cx - w / 2, top, cx - w / 2 + w, top + h};
+    return {cx - w / 2, m.t, cx - w / 2 + w, m.t + h};
 }
 
 // La vue web garde la taille du panneau complet ; la fenêtre la découpe. Elle est centrée.
@@ -206,11 +206,68 @@ void UpdateWebBounds() {
     gtk_layout_move(GTK_LAYOUT(g_layout), g_view, (g_rect.w() - fullW) / 2, 0);
 }
 
+// Coins bas arrondis découpés dans la fenêtre elle-même : sous KDE, la transparence de la vue ne
+// suffit pas, les coins restaient carrés. Même rayon que le verre (--r, .ambient dans dock.css).
+void ApplyShape() {
+    GdkWindow* win = gtk_widget_get_window(g_window);
+    if (!win) return;
+    int w = std::max(1, g_rect.w()), h = std::max(1, g_rect.h());
+    int r = std::min({g_state == State::Progress || g_state == State::Peek ? 4 : 18, h, w / 2});
+    static int lastW = 0, lastH = 0, lastR = 0;
+    if (w == lastW && h == lastH && r == lastR) return;
+    lastW = w, lastH = h, lastR = r;
+    cairo_rectangle_int_t body{0, 0, w, h - r};
+    cairo_region_t* region = cairo_region_create_rectangle(&body);
+    for (int y = 0; y < r; ++y) {
+        double dy = y + 0.5;
+        int inset = r - (int)std::lround(std::sqrt(r * r - dy * dy));
+        cairo_rectangle_int_t row{inset, h - r + y, w - 2 * inset, 1};
+        cairo_region_union_rectangle(region, &row);
+    }
+    gdk_window_shape_combine_region(win, region, 0, 0);
+    cairo_region_destroy(region);
+}
+
 void PlaceWindow(const Rect& r) {
     g_rect = r;
     gtk_window_move(GTK_WINDOW(g_window), r.l, r.t);
     gtk_window_resize(GTK_WINDOW(g_window), std::max(1, r.w()), std::max(1, r.h()));
     UpdateWebBounds();
+    ApplyShape();
+}
+
+// ------------------------------------------------------------------ molette
+
+// La molette est prise dès GDK et remise à la page, qui déplace la zone sous la souris : sous KDE,
+// elle n'arrivait jamais au défilement de WebKit. SHADOW_DEBUG=1 trace ce qui arrive ici.
+bool g_debug = false;
+bool g_sawSmooth = false;
+
+bool ForwardScroll(GdkEvent* e) {
+    GdkWindow* dock = gtk_widget_get_window(g_window);
+    if (!dock || gdk_window_get_toplevel(e->scroll.window) != dock) return false; // boîte de dialogue, menu…
+    double dx = 0, dy = 0;
+    if (e->scroll.direction == GDK_SCROLL_SMOOTH) {
+        gdk_event_get_scroll_deltas(e, &dx, &dy);
+        g_sawSmooth = true;
+    } else if (e->scroll.direction == GDK_SCROLL_UP || e->scroll.direction == GDK_SCROLL_DOWN) {
+        if (g_sawSmooth && gdk_event_get_pointer_emulated(e)) return true; // doublon du défilement continu
+        dy = e->scroll.direction == GDK_SCROLL_UP ? -1 : 1;
+    } else {
+        return false;
+    }
+    int ox = 0, oy = 0;
+    gdk_window_get_origin(dock, &ox, &oy);
+    int viewLeft = (g_rect.w() - g_cfg.width) / 2;
+    int x = (int)e->scroll.x_root - ox - viewLeft, y = (int)e->scroll.y_root - oy;
+    if (g_debug) g_printerr("[molette] sens=%d dy=%.3f page=%d,%d\n", (int)e->scroll.direction, dy, x, y);
+    bridge::PostToPage("{\"t\":\"wheel\",\"x\":" + std::to_string(x) + ",\"y\":" + std::to_string(y) + ",\"dy\":" + std::to_string(dy) + "}");
+    return true;
+}
+
+void OnGdkEvent(GdkEvent* e, gpointer) {
+    if (e->type == GDK_SCROLL && ForwardScroll(e)) return;
+    gtk_main_do_event(e);
 }
 
 // ------------------------------------------------------------------ animation
@@ -431,6 +488,16 @@ void Init(void* window, void* layout, void* view) {
     g_view = GTK_WIDGET(view);
     g_rect = TargetRect(State::Hidden);
     UpdateWebBounds();
+    gtk_widget_realize(g_window); // la découpe demande une fenêtre X existante
+    ApplyShape();
+    gdk_event_handler_set(OnGdkEvent, nullptr, nullptr);
+    g_debug = g_getenv("SHADOW_DEBUG");
+    if (g_debug) {
+        GdkScreen* screen = gdk_display_get_default_screen(GdkDisp());
+        g_printerr("[dock] session=%s wayland=%s x11=%d composite=%d rgba=%d webkit=%u.%u.%u\n", g_getenv("XDG_SESSION_TYPE"),
+                   g_getenv("WAYLAND_DISPLAY"), GDK_IS_X11_DISPLAY(GdkDisp()), gdk_screen_is_composited(screen),
+                   gdk_screen_get_rgba_visual(screen) != nullptr, webkit_get_major_version(), webkit_get_minor_version(), webkit_get_micro_version());
+    }
     // Alt+F4 / fermeture par le gestionnaire de fenêtres : on replie, on ne quitte pas.
     g_signal_connect(g_window, "delete-event", G_CALLBACK(+[](GtkWidget*, GdkEvent*, gpointer) -> gboolean {
                          HideByUser();

@@ -78,6 +78,7 @@ body {
    transparente et le verre est dessiné par la page, .ambient (dock.css), au bas arrondi. Windows y ajoute
    des bords évasés vers l'écran. Taille du verre par état : --shell-w/--shell-h ; --fl = évasement. */
 html.linux, html:has(body.preview) { --flare: 0px; --flare-pad: 0px; }
+html.linux { --inset: 0px; } /* KWin ramène la fenêtre à y = 0 : pas de marge cachée (= kInset dans dock_linux.cpp) */
 
 body { --shell-w: var(--dock-w); --shell-h: calc(var(--bar-h) + var(--panel-h)); --fl: var(--flare); }
 body.st-hidden { --shell-w: 0px; --shell-h: 0px; --fl: 0px; }
