@@ -285,5 +285,6 @@ bool Download(const std::string& url, const std::string& dest, uint64_t maxBytes
 }
 
 void OpenDock() { dock::OpenPanelAsync(); }
+void ShowListening(bool on) { dock::SetListeningAsync(on); }
 
 } // namespace voice::platform

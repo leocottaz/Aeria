@@ -13,6 +13,8 @@ jobs:
         shell: msys2 {0}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
@@ -48,6 +50,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - name: Dépendances
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libcurl4-openssl-dev libx11-dev
       - name: Compiler et empaqueter (archive portable)

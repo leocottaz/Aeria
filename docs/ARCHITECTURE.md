@@ -47,7 +47,7 @@ Chaque module expose une petite interface dans son `.h` (un `namespace` : `dock:
 | Module | Rôle |
 | --- | --- |
 | `main.cpp` | Instance unique, initialisation, boucle de messages. |
-| `app/dock.*` | Fenêtre acrylique, états (`hidden`, `progress`, `peek`, `mini`, `music`, `bar`, `panel`), animations, détection de la souris, écran courant (rangé, le dock suit l'écran de la souris), repli auto, raccourci Ctrl+Alt+Espace, menu de l'icône, application des réglages. |
+| `app/dock.*` | Fenêtre acrylique, états (`hidden`, `progress`, `peek`, `mini`, `music`, `listen`, `bar`, `panel`), animations, détection de la souris, écran courant (rangé, le dock suit l'écran de la souris), repli auto, raccourci Ctrl+Alt+Espace, menu de l'icône, application des réglages. |
 | `app/tray.*` | Icône de notification (générée à l'exécution) et bulles Windows. |
 | `app/autostart.*` | Clé `Run` pour le lancement au démarrage. |
 | `web/webview_host.*` | Création de WebView2 (`--in-process-gpu` si l'économie de mémoire est activée, réglage dans `HKCU\Software\Aeria\LowMemory`), fond transparent, liens externes ouverts dans le navigateur, réception des messages, veille quand le dock est caché (`SetVisible(false)` : cible mémoire basse + `TrySuspend`), recréation si le processus meurt. |
@@ -140,7 +140,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | --- | --- | --- |
 | `init` | `hasKey`, `keyHint`, `autostart`, `lowMemory` (Windows), `freeKeys`, `version`, `canUpdate` | Réponse à `ready`. Sans `lowMemory`, la page garde son réglage. `version` : numéro de l'exécutable (`0.0.0` = build de développement). `canUpdate` : copie installée par `Setup.exe`. |
 | `update` | `state` (`downloading`, `verifying`, `installing`, `restarting`, `error`), `pct`, `msg` | Avancement d'une mise à jour. Sur `restarting`, la page envoie `quit` : l'installateur relance le dock. |
-| `voice` | `state` (`off`, `nomodel`, `downloading`, `loading`, `idle`, `awake`, `working`, `error`, `heard`), `pct`, `msg`, `text` | État de l'écoute. `heard` : `text` est la phrase à envoyer à Aeria (le natif a déjà ouvert le dock). |
+| `voice` | `state` (`off`, `nomodel`, `downloading`, `loading`, `idle`, `awake`, `working`, `error`, `heard`), `pct`, `msg`, `text` | État de l'écoute. `heard` : `text` est la phrase à envoyer à Aeria (le natif a déjà ouvert le dock). `awake` / `working` : l'encoche « j'écoute » est ouverte. |
 | `freekey` | `service`, `ok`, `freeKeys` | Résultat de `freekey` / `delfreekey`. |
 | `state` | `s`, `delay`, `pinned` | Nouvel état du dock. |
 | `key` | `ok`, `hasKey`, `keyHint` | Résultat de `key`/`delkey`. |
@@ -270,7 +270,7 @@ git tag v0.1.0 && git push origin v0.1.0
 Réglage « Réveiller Aeria à la voix » (`voiceWake`, désactivé par défaut, transmis par `config`). Tout se passe dans le natif, hors ligne :
 1. **Micro** (`platform::StartCapture`) : 16 kHz mono, lu en continu par un thread dédié. Rien n'est enregistré sur disque.
 2. **Phrases** (`Segmenter`, `voice.cpp`) : détecteur d'énergie à seuil adaptatif (plancher de bruit mesuré). Une phrase commence après 80 ms de voix, finit après 0,7 s de silence (1,1 s pendant une commande), 12 s au plus.
-3. **Transcription** : whisper.cpp (`third_party/whisper.cpp`, CPU, AVX2) avec `ggml-base-q5_1.bin` (~190 Mo, téléchargé à l'activation dans `%APPDATA%\Aeria\models` / `~/.local/share/Aeria/models`, SHA-256 épinglé dans `voice.cpp`). Le CPU ne travaille que pendant les phrases.
-4. **Mot d'éveil** (`FindWakeWord`) : « Aeria » à une lettre près (« Aria », « Éria »…) ou coupé en deux petits mots, dans les 3 premiers mots seulement. Le reste de la phrase est la commande ; sinon l'écoute reste ouverte 8 s (`awake`).
-5. **Ouverture** : `dock::OpenPanelAsync` (message `WM_APP_OPEN` sous Windows, `g_idle_add` sous Linux), puis `{"t":"voice","state":"heard"}` : la page envoie le texte comme une question tapée.
+3. **Transcription** : whisper.cpp (`third_party/whisper.cpp`, CPU, AVX2) avec `ggml-small-q5_1.bin` (~190 Mo, téléchargé à l'activation dans `%APPDATA%\Aeria\models` / `~/.local/share/Aeria/models`, SHA-256 épinglé dans `voice.cpp`). Le CPU ne travaille que pendant les phrases.
+4. **Mot d'éveil** (`FindWakeWord`) : « Aeria » à une lettre près (« Aria », « Éria »…) ou coupé en deux petits mots, dans les 3 premiers mots seulement. Le reste de la phrase est la commande ; sinon l'écoute reste ouverte 8 s (`awake`) et une **encoche** s'ouvre au sommet du dock rangé (état `listen`, 190 × 40 DIP, « Je t'écoute… » puis « Je transcris… ») : `dock::SetListeningAsync` (message `WM_APP_LISTEN` sous Windows, `g_idle_add` sous Linux), appelé par `Post` dès que l'état vaut `awake` ou `working`, et refermé aux autres. Si la barre ou le panneau sont déjà ouverts, il n'y a pas d'encoche : le champ « Demander » s'éclaire et le dock ne se replie pas pendant l'écoute.
+5. **Ouverture** : quand il y a une phrase à envoyer (`Deliver`), `dock::OpenPanelAsync` (message `WM_APP_OPEN` sous Windows, `g_idle_add` sous Linux) remplace l'encoche par le panneau, puis `{"t":"voice","state":"heard"}` : la page envoie le texte comme une question tapée.
 Banc d'essai : `tools/test/voice/run.ps1` (faux micro, phrases dites par la voix de Windows).

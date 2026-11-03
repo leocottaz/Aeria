@@ -4,7 +4,7 @@
 
 #include <cstdio>
 
-namespace dock { void OpenPanelAsync() {} } // faux dock : le banc n'ouvre rien
+namespace dock { void OpenPanelAsync() {} void SetListeningAsync(bool) {} } // faux dock : le banc n'ouvre rien
 
 int main(int argc, char** argv) {
     if (argc < 2) return 2;

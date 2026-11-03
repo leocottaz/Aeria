@@ -25,4 +25,7 @@ bool Download(const std::string& url, const std::string& dest, uint64_t maxBytes
 // Ouvre le panneau du dock. Utilisable depuis n'importe quel thread.
 void OpenDock();
 
+// Fait apparaître (true) ou rentrer (false) l'encoche « j'écoute » du dock. Utilisable depuis n'importe quel thread.
+void ShowListening(bool on);
+
 } // namespace voice::platform

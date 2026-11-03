@@ -32,6 +32,9 @@ function render() {
   $('#voiceBar').hidden = m.state !== 'downloading';
   $('#voiceFill').style.width = `${m.pct ?? 0}%`;
 
+  // L'encoche du dock rangé (état natif « listen », css/dock.css) reprend le même texte.
+  $('#listenText').textContent = m.state === 'working' ? 'Je transcris…' : 'Je t’écoute…';
+
   // Le champ « Demander » montre que l'assistante écoute (sans animation continue : voir Pièges).
   const ask = $('#askForm'), input = $('#askInput');
   const listening = settings.voiceWake && (m.state === 'awake' || m.state === 'working');

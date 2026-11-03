@@ -26,6 +26,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## whisper.cpp et ggml (commande vocale)
 
-Le code de [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (v1.9.5, dossier `third_party/whisper.cpp`, allégé : sans exemples, tests ni backends GPU) est sous licence MIT, Copyright (c) 2023-2026 The ggml authors. Le texte complet est dans `third_party/whisper.cpp/LICENSE`.
+Le code de [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (v1.9.5, sous-module git `third_party/whisper.cpp`) est sous licence MIT, Copyright (c) 2023-2026 The ggml authors. Le texte complet est dans `third_party/whisper.cpp/LICENSE`.
 
-Le modèle `ggml-base-q5_1.bin` (non inclus dans le dépôt : l'application le télécharge depuis [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp)) est une conversion du modèle Whisper « base » d'OpenAI, sous licence MIT, Copyright (c) 2022 OpenAI.
+Le modèle `ggml-small-q5_1.bin` (non inclus dans le dépôt : l'application le télécharge depuis [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp)) est une conversion du modèle Whisper « small » d'OpenAI, sous licence MIT, Copyright (c) 2022 OpenAI.

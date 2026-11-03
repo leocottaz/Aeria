@@ -49,8 +49,13 @@ bool Debug() {
 
 std::mutex g_stateMutex;
 std::string g_lastState; // dernier message d'état, renvoyé par « status »
+std::atomic<bool> g_notch{false}; // l'encoche « j'écoute » du dock est ouverte
 
 void Post(const char* state, int pct = -1, const std::string& msg = "", const std::string& text = "") {
+    // L'encoche suit l'écoute : ouverte tant qu'on attend ou transcrit la commande, fermée sinon.
+    const std::string name = state;
+    const bool listening = name == "awake" || name == "working";
+    if (g_notch.exchange(listening) != listening) platform::ShowListening(listening);
     std::string j = std::string("{\"t\":\"voice\",\"state\":\"") + state + "\"";
     if (pct >= 0) j += ",\"pct\":" + std::to_string(pct);
     if (!msg.empty()) j += ",\"msg\":" + util::Json(msg);
@@ -277,6 +282,7 @@ void Enqueue(std::vector<float>&& pcm) {
 // Un texte à envoyer à l'assistante : la page le pose dans la conversation.
 void Deliver(const std::string& text) {
     g_awake = false;
+    platform::OpenDock(); // avant la fin de l'écoute : le panneau prend la place de l'encoche
     Post("heard", -1, "", text);
     Post("idle");
 }
@@ -291,7 +297,6 @@ void Handle(const std::string& text, std::chrono::steady_clock::time_point& awak
         return;
     }
     if (!named) return;
-    platform::OpenDock();
     if (!IsNoise(rest)) {
         Deliver(rest);
     } else {

@@ -31,6 +31,12 @@
     <span class="pill-line" id="pillLine"></span>
   </button>
 
+  <!-- Encoche « j'écoute » (état « listen ») : « Aeria » a été entendu, la commande vocale attend la suite (js/features/voice.js) -->
+  <div class="listen" id="listen" role="status">
+    <span class="listen-mic"><i data-icon="mic"></i></span>
+    <span id="listenText">Je t’écoute…</span>
+  </div>
+
   <!-- Carte musique (état « music ») : descend seule quand le morceau change (js/features/music.js) -->
   <div class="mcard" id="mcard">
     <button type="button" class="mcard-open" id="mcardOpen" title="Ouvrir le lecteur">

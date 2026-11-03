@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <thread>
 
-namespace dock { void OpenPanelAsync() {} }
+namespace dock { void OpenPanelAsync() {} void SetListeningAsync(bool) {} }
 
 int main() {
     std::atomic<int> peak{0};

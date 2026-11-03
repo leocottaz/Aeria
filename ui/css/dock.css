@@ -185,6 +185,45 @@ body:not(.preview) .ambient {
 @keyframes lyric-in { from { opacity: 0; transform: translateY(12px) scale(.97); } }
 @keyframes lyric-out { to { opacity: 0; transform: translateY(-12px) scale(.97); } }
 
+/* ---------------------------------------------------------------- encoche « j'écoute » */
+/* S'ouvre quand « Aeria » a été entendu (état natif « listen », src/features/voice.cpp). Largeur et
+   hauteur = kListenW et kMiniH dans src/app/dock.cpp. Rien n'y bouge en continu (voir Pièges) :
+   une seule animation, à l'apparition. */
+:root { --listen-w: 190px; } /* = kListenW dans src/app/dock.cpp */
+.listen {
+  position: fixed;
+  top: var(--inset);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: var(--listen-w);
+  height: var(--mini-h);
+  color: var(--fg);
+  font: 650 13.5px/1 var(--font-d);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  translate: -50% 0;
+  transition: opacity .3s var(--smooth), visibility 0s .3s;
+}
+.st-listen .listen { opacity: 1; visibility: visible; transition-delay: 0s; }
+.st-progress .listen, .st-bar .listen, .st-panel .listen { transition: none; }
+.listen-mic {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 14px -2px var(--accent);
+  color: #fff;
+}
+.listen-mic .ic { width: 13px; height: 13px; }
+.st-listen .listen-mic { animation: pop .5s var(--spring) both; }
+
 /* -------------------------------------------------------------------- barre */
 
 .bar {

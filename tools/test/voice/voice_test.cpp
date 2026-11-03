@@ -77,6 +77,7 @@ void StopCapture() {
 std::string ModelPath() { return g_model; }
 bool Download(const std::string&, const std::string&, uint64_t, const std::string&, const std::function<void(int)>&, std::string&) { return false; }
 void OpenDock() { g_opens++; }
+void ShowListening(bool on) { std::printf("  [encoche %s]\n", on ? "ouverte" : "fermée"); }
 } // namespace voice::platform
 
 int main(int argc, char** argv) {

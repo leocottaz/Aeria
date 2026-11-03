@@ -24,6 +24,8 @@ Tes rappels, notes et clés sont conservés quand tu désinstalles ou mets à jo
 
 ### Windows
 
+Clone avec les sous-modules (whisper.cpp) : `git clone --recurse-submodules --shallow-submodules https://github.com/leocottaz/Aeria.git` ; dans un clone existant, `git submodule update --init --depth 1`.
+
 Prérequis : Windows 10/11 x64, CMake ≥ 3.25, Ninja et MinGW-w64 (`g++`) dans le `PATH`. [MSYS2](https://www.msys2.org) fournit les trois (voir [CONTRIBUTING.md](CONTRIBUTING.md)).
 
 ```powershell
@@ -113,7 +115,7 @@ ui/                  interface (copiée à côté de l'exe à chaque build)
   js/features/       rappels, to-do, notes, minuteur, musique, fichiers, routines
   js/chat/           conversation, transports (API, Pro, Gratuit), outils, prompts
 tools/               scripts de développement (aperçu, DevTools, captures, mesures)
-third_party/         SDK WebView2 (Microsoft.Web.WebView2 1.0.4314.35)
+third_party/         SDK WebView2 (Microsoft.Web.WebView2 1.0.4314.35) ; whisper.cpp v1.9.5 (sous-module git)
 docs/ARCHITECTURE.md rôle de chaque module, protocole page ↔ natif, recettes
 ```
 

@@ -38,9 +38,10 @@ constexpr int kTabW = 150, kTabH = 7;
 constexpr int kStripW = 300, kStripH = 6;
 constexpr int kMiniH = 40;
 constexpr int kMusicH = 76;
+constexpr int kListenW = 190; // encoche « j'écoute » ; hauteur = kMiniH
 constexpr int kExtra = 40;
 
-enum class State { Hidden, Progress, Peek, Mini, Music, Bar, Panel };
+enum class State { Hidden, Progress, Peek, Mini, Music, Listen, Bar, Panel };
 
 const char* StateName(State s) {
     switch (s) {
@@ -49,6 +50,7 @@ const char* StateName(State s) {
         case State::Peek: return "peek";
         case State::Mini: return "mini";
         case State::Music: return "music";
+        case State::Listen: return "listen";
         case State::Bar: return "bar";
         case State::Panel: return "panel";
     }
@@ -90,6 +92,7 @@ bool g_releaseHoldOnEnter = false;
 bool g_waitLeave = false;
 int g_miniW = 0;
 int g_musicW = 380;
+bool g_listening = false; // la commande vocale écoute : l'encoche reste là
 guint g_animSource = 0;
 KeyCode g_hotkeyCode = 0;
 bool g_xwayland = false; // session Wayland : on tourne dans XWayland (voir « souris sous XWayland »)
@@ -194,6 +197,7 @@ Rect TargetRect(State s) {
         case State::Peek: w = kTabW; h = kInset + kTabH; break;
         case State::Mini: w = g_miniW; h = kInset + kMiniH; break;
         case State::Music: w = g_musicW; h = kInset + kMusicH; break;
+        case State::Listen: w = kListenW; h = kInset + kMiniH; break;
         case State::Bar: h = kInset + kBarH; break;
         case State::Panel: h = kInset + kBarH + g_cfg.panelH; break;
     }
@@ -362,8 +366,8 @@ void SetState(State s, bool force = false) {
         media::Command("refresh");
     }
     bool growing = s == State::Panel || (s == State::Bar && prev != State::Panel) ||
-                   ((s == State::Mini || s == State::Music) && IsResting(prev));
-    int duration = s == State::Panel ? 420 : s == State::Bar ? 380 : s == State::Mini || s == State::Music ? 360 : 260;
+                   ((s == State::Mini || s == State::Music || s == State::Listen) && IsResting(prev));
+    int duration = s == State::Panel ? 420 : s == State::Bar ? 380 : s == State::Mini || s == State::Music || s == State::Listen ? 360 : 260;
     if (prev == State::Panel && s == State::Bar) duration = 320;
     AnimateTo(TargetRect(s), duration, growing);
     NotifyState();
@@ -381,7 +385,9 @@ void HoldUntilHovered(gint64 ms) {
 }
 
 void FollowMouse(int x, int y) {
-    if (g_state == State::Bar || g_state == State::Panel || g_state == State::Music || g_anim.active) return;
+    if (g_state == State::Bar || g_state == State::Panel || g_state == State::Music || g_state == State::Listen ||
+        g_anim.active)
+        return;
     GdkMonitor* mon = MonitorAt(x, y);
     if (mon == Monitor()) return;
     g_monitor = mon;
@@ -430,6 +436,9 @@ gboolean Poll(gpointer) {
             if (!atTopEdge) SetState(RestState());
             else if (now - g_progressStart >= g_cfg.revealDelay) SetState(State::Bar);
             break;
+        case State::Listen:
+            if (!g_listening) SetState(RestState()); // l'écoute est finie (la voix envoie sa fin, ou le micro s'arrête)
+            break;
         case State::Music:
         case State::Bar:
         case State::Panel: {
@@ -456,6 +465,18 @@ gboolean Poll(gpointer) {
         }
     }
     return G_SOURCE_CONTINUE;
+}
+
+// « Aeria » entendu : une encoche s'ouvre tant que la voix écoute. Barre ou panneau ouverts, c'est leur champ
+// « Demander » qui s'éclaire (js/features/voice.js) : on les empêche seulement de se replier pendant l'écoute.
+void SetListening(bool on) {
+    g_listening = on;
+    if (on) {
+        if (g_state == State::Bar || g_state == State::Panel) HoldUntilHovered(9000);
+        else SetState(State::Listen);
+    } else if (g_state == State::Listen) {
+        SetState(RestState());
+    }
 }
 
 // ------------------------------------------------------------------ entrées
@@ -605,6 +626,13 @@ void OpenPanelAsync() {
         OpenPanel();
         return G_SOURCE_REMOVE;
     }, nullptr);
+}
+
+void SetListeningAsync(bool on) {
+    g_idle_add(+[](gpointer data) -> gboolean {
+        SetListening(GPOINTER_TO_INT(data) != 0);
+        return G_SOURCE_REMOVE;
+    }, GINT_TO_POINTER(on ? 1 : 0));
 }
 
 void ShowBar() { SetState(State::Bar); }

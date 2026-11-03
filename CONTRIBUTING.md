@@ -8,6 +8,8 @@ Le projet est en français : commentaires, interface, messages de commit.
 - **Windows** : Windows 10/11 x64 avec le runtime WebView2 (déjà présent sur Windows 11). CMake ≥ 3.25, Ninja et MinGW-w64 (`g++` C++20). Le plus simple : [MSYS2](https://www.msys2.org), la chaîne utilisée par la CI. Dans son terminal **MINGW64** : `pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-gdb`, puis ajoute `C:\msys64\mingw64\bin` à ton `PATH`. N'importe quel éditeur convient. MSVC n'est pas testé.
 - **Linux** : CMake ≥ 3.25, Ninja, `g++` (C++20), `pkg-config` et les paquets `libgtk-3-dev libwebkit2gtk-4.1-dev libcurl4-openssl-dev libx11-dev` (Arch : `gtk3 webkit2gtk-4.1 curl libx11`). Sous Windows, WSL avec WSLg convient pour compiler et lancer.
 
+Le code de whisper.cpp (commande vocale) est un **sous-module git** : clone avec `--recurse-submodules --shallow-submodules`, ou dans un clone existant `git submodule update --init --depth 1` (sans cela CMake s'arrête avec un message clair).
+
 ### Compiler
 
 ```powershell

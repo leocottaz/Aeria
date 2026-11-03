@@ -16,7 +16,7 @@ function setState(st, info = {}) {
   S.st = st;
   S.pinned = !!info.pinned;
   const b = document.body;
-  b.classList.remove('st-hidden', 'st-progress', 'st-peek', 'st-mini', 'st-music', 'st-bar', 'st-panel');
+  b.classList.remove('st-hidden', 'st-progress', 'st-peek', 'st-mini', 'st-music', 'st-listen', 'st-bar', 'st-panel');
   b.classList.add('st-' + st);
   $('#pinBtn').classList.toggle('on', S.pinned);
 

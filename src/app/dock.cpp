@@ -35,12 +35,14 @@ constexpr int kTabW = 150, kTabH = 7;     // languette (mode 1)
 constexpr int kStripW = 300, kStripH = 6; // barre de progression (mode 0)
 constexpr int kMiniH = 40;                // mini-dock : rappels, paroles (= --mini-h dans ui/css/dock.css)
 constexpr int kMusicH = 76;               // carte musique (= --mcard-h dans ui/css/music.css)
+constexpr int kListenW = 190;             // encoche « j'écoute » de la commande vocale (= --listen-w dans ui/css/dock.css) ; hauteur = kMiniH
 constexpr int kFlare = 32;                // marge de chaque côté pour les bords évasés, au maximum (= --flare-pad dans ui/css/base.css)
 constexpr int kExtra = 40;               // marge pour le rebond de l'animation
 
 // Mini : dock rangé réduit à une pastille (cloche des rappels sonnés, ligne de paroles en cours).
 // Music : carte du morceau (pochette, titre, contrôles) qui descend quand la musique change.
-enum class State { Hidden, Progress, Peek, Mini, Music, Bar, Panel };
+// Listen : encoche qui s'ouvre quand « Aeria » a été entendu, tant que la commande vocale écoute.
+enum class State { Hidden, Progress, Peek, Mini, Music, Listen, Bar, Panel };
 
 const char* StateName(State s) {
     switch (s) {
@@ -49,6 +51,7 @@ const char* StateName(State s) {
         case State::Peek: return "peek";
         case State::Mini: return "mini";
         case State::Music: return "music";
+        case State::Listen: return "listen";
         case State::Bar: return "bar";
         case State::Panel: return "panel";
     }
@@ -80,6 +83,7 @@ bool g_releaseHoldOnEnter = false; // une ouverture sans la souris tient jusqu'a
 bool g_waitLeave = false;          // après un repli manuel, pas de réapparition avant que la souris parte
 int g_miniW = 0;                   // largeur voulue par la page pour le mini-dock (DIP), 0 = rien à montrer
 int g_musicW = 380;                // largeur de la carte musique (DIP), selon le titre
+bool g_listening = false;          // la commande vocale écoute : l'encoche reste là
 
 // ------------------------------------------------------------------ géométrie
 
@@ -122,6 +126,7 @@ RECT TargetRect(State s) {
         case State::Peek: w = kTabW; h = kInset + kTabH; break;
         case State::Mini: w = g_miniW; h = kInset + kMiniH; break;
         case State::Music: w = g_musicW; h = kInset + kMusicH; break;
+        case State::Listen: w = kListenW; h = kInset + kMiniH; break;
         case State::Bar: h = kInset + kBarH; break;
         case State::Panel: h = kInset + kBarH + g_cfg.panelH; break;
     }
@@ -231,8 +236,8 @@ void SetState(State s, bool force = false) {
         media::Command("refresh"); // la page était suspendue : on lui renvoie l'état du lecteur
     }
     bool growing = s == State::Panel || (s == State::Bar && prev != State::Panel) ||
-                   ((s == State::Mini || s == State::Music) && IsResting(prev));
-    int duration = s == State::Panel ? 420 : s == State::Bar ? 380 : s == State::Mini || s == State::Music ? 360 : 260;
+                   ((s == State::Mini || s == State::Music || s == State::Listen) && IsResting(prev));
+    int duration = s == State::Panel ? 420 : s == State::Bar ? 380 : s == State::Mini || s == State::Music || s == State::Listen ? 360 : 260;
     if (prev == State::Panel && s == State::Bar) duration = 320;
     AnimateTo(TargetRect(s), duration, growing);
     NotifyState();
@@ -251,7 +256,9 @@ void HoldUntilHovered(ULONGLONG ms) {
 
 // Rangé (masqué, languette, mini-dock, progression), le dock passe sur l'écran de la souris.
 void FollowMouse(POINT p) {
-    if (g_state == State::Bar || g_state == State::Panel || g_state == State::Music || g_anim.active) return;
+    if (g_state == State::Bar || g_state == State::Panel || g_state == State::Music || g_state == State::Listen ||
+        g_anim.active)
+        return;
     HMONITOR mon = MonitorFromPoint(p, MONITOR_DEFAULTTONEAREST);
     if (mon == Monitor()) return;
     g_monitor = mon;
@@ -303,6 +310,9 @@ void Poll() {
             if (!atTopEdge) SetState(RestState());
             else if (now - g_progressStart >= (ULONGLONG)g_cfg.revealDelay) SetState(State::Bar);
             break;
+        case State::Listen:
+            if (!g_listening) SetState(RestState()); // l'écoute est finie (la voix envoie sa fin, ou le micro s'arrête)
+            break;
         case State::Music:
         case State::Bar:
         case State::Panel: {
@@ -344,6 +354,18 @@ void Poll() {
             }
             break;
         }
+    }
+}
+
+// « Aeria » entendu : une encoche s'ouvre tant que la voix écoute. Barre ou panneau ouverts, c'est leur champ
+// « Demander » qui s'éclaire (js/features/voice.js) : on les empêche seulement de se replier pendant l'écoute.
+void SetListening(bool on) {
+    g_listening = on;
+    if (on) {
+        if (g_state == State::Bar || g_state == State::Panel) HoldUntilHovered(9000);
+        else SetState(State::Listen);
+    } else if (g_state == State::Listen) {
+        SetState(RestState());
     }
 }
 
@@ -417,6 +439,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         case WM_APP_OPEN:
             OpenPanel();
+            return 0;
+        case WM_APP_LISTEN:
+            SetListening(wp != 0);
             return 0;
         case WM_HOTKEY:
             if (wp == HOTKEY_TOGGLE) ToggleFromHotkey();
@@ -542,6 +567,8 @@ void OpenPanel() {
 }
 
 void OpenPanelAsync() { PostMessageW(g_hwnd, WM_APP_OPEN, 0, 0); }
+
+void SetListeningAsync(bool on) { PostMessageW(g_hwnd, WM_APP_LISTEN, on ? 1 : 0, 0); }
 
 void ShowBar() { SetState(State::Bar); }
 
