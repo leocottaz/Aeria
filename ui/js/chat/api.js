@@ -1,8 +1,8 @@
 // Mode « Clé API » : requêtes streaming à l'API Messages, avec outils.
-import { store, toast } from '../core/util.js';
+import { toast } from '../core/util.js';
 import { http, apiErrorText } from '../core/bridge.js';
 import { settings, apiModel } from '../core/settings.js';
-import { convo, turn, handleEvent, rollback, endTurn, setStreaming, renderChat, scheduleLive } from './chat.js';
+import { convo, turn, saveConvo, handleEvent, rollback, endTurn, setStreaming, renderChat, scheduleLive } from './chat.js';
 import { TOOLS, execTool } from './tools.js';
 import { buildSystem } from './prompts.js';
 
@@ -118,7 +118,7 @@ function onStreamDone(cancelled) {
       if (turn !== t) return; // annulé entre-temps
       convo.messages.push({ role: 'user', content: results });
       t.loops++;
-      store.set('convo', convo);
+      saveConvo();
       renderChat();
       streamStep();
     });

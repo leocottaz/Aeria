@@ -32,7 +32,8 @@ constexpr uint64_t kModelMaxBytes = 260ull * 1024 * 1024;
 constexpr int kRate = 16000;
 constexpr int kFrame = kRate / 50;            // 20 ms
 constexpr int kPreRoll = 15;                  // 300 ms gardées avant le début détecté
-constexpr int kStartFrames = 4;               // 80 ms de voix d'affilée pour déclencher
+constexpr double kMinThreshold = 80;          // rms minimal d'une voix : le micro de l'utilisateur donne ~100-150 en parlant, ~5-15 au repos
+constexpr int kStartFrames = 4;              // 80 ms de voix d'affilée pour déclencher
 constexpr int kMinVoiced = 12;                // moins de 240 ms de voix : bruit, on jette
 constexpr int kEndIdle = 35;                  // 700 ms de silence ferment une phrase
 constexpr int kEndAwake = 55;                 // 1,1 s pendant une commande (on réfléchit en parlant)
@@ -76,6 +77,8 @@ class Segmenter {
 public:
     using Emit = std::function<void(std::vector<float>&&)>;
     explicit Segmenter(Emit emit) : emit_(std::move(emit)) {}
+    double Floor() const { return floor_; }
+    bool Speaking() const { return speaking_; } // une phrase est en cours (lu par le worker, écrit par le thread du micro)
 
     void Feed(const int16_t* s, size_t n, int endFrames) {
         for (size_t i = 0; i < n; i++) {
@@ -92,9 +95,10 @@ private:
         double energy = 0;
         for (int16_t v : frame_) energy += double(v) * v;
         const double rms = std::sqrt(energy / kFrame);
-        const bool loud = rms > std::max(floor_ * 3.0, 250.0);
+        const bool loud = rms > std::max(floor_ * 3.0, kMinThreshold);
         if (!speaking_) {
-            if (!loud) floor_ = std::clamp(0.98 * floor_ + 0.02 * rms, 30.0, 2000.0);
+            // Le plancher descend vite mais ne monte que lentement : une voix douce ne doit pas le tirer vers le haut.
+            if (!loud) floor_ = std::clamp((rms < floor_ ? 0.95 : 0.995) * floor_ + (rms < floor_ ? 0.05 : 0.005) * rms, 20.0, 2000.0);
             pre_.emplace_back(frame_, frame_ + kFrame);
             if (pre_.size() > kPreRoll) pre_.pop_front();
             run_ = loud ? run_ + 1 : 0;
@@ -125,6 +129,7 @@ private:
         run_ = 0;
         voiced_ = 0;
         silence_ = 0;
+        if (Debug()) std::fprintf(stderr, "[voice] phrase finie : %zu ms, %d images de voix, plancher %.0f%s\n", utt.size() / 16, voiced, floor_, voiced < kMinVoiced ? " (trop court : jetée)" : "");
         if (voiced < kMinVoiced) return;
         // Niveau : les micros d'ordinateur portable sont souvent faibles, whisper préfère un signal franc.
         int peak = 1;
@@ -140,7 +145,7 @@ private:
     int fill_ = 0;
     std::deque<std::vector<int16_t>> pre_;
     std::vector<int16_t> utt_;
-    bool speaking_ = false;
+    std::atomic<bool> speaking_{false};
     int run_ = 0, voiced_ = 0, silence_ = 0;
     double floor_ = 100;
 };
@@ -269,6 +274,9 @@ std::condition_variable g_queueCv;
 std::deque<std::vector<float>> g_queue;
 std::atomic<bool> g_awake{false};
 std::atomic<long long> g_listenRequest{0}; // « listen » de la page : le worker passe en écoute
+std::atomic<long long> g_cancelRequest{0}; // « cancel » de la page : le worker arrête d'écouter
+std::atomic<bool> g_buttonListen{false};  // l'écoute vient d'un bouton micro : la page dicte dans son champ, le panneau ne s'ouvre pas
+std::atomic<bool> g_oneShot{false};        // bouton micro sans « Aeria » activé : le micro ne reste ouvert que le temps d'une phrase
 
 void Enqueue(std::vector<float>&& pcm) {
     {
@@ -282,7 +290,7 @@ void Enqueue(std::vector<float>&& pcm) {
 // Un texte à envoyer à l'assistante : la page le pose dans la conversation.
 void Deliver(const std::string& text) {
     g_awake = false;
-    platform::OpenDock(); // avant la fin de l'écoute : le panneau prend la place de l'encoche
+    if (!g_buttonListen.exchange(false)) platform::OpenDock(); // avant la fin de l'écoute : le panneau prend la place de l'encoche
     Post("heard", -1, "", text);
     Post("idle");
 }
@@ -322,8 +330,23 @@ void Worker() {
     bool zeroReported = false;
     Segmenter seg(Enqueue);
     std::string error;
+    double levelSum = 0, levelPeak = 0; // traces (AERIA_DEBUG) : niveau du micro par seconde
+    long levelN = 0;
     bool ok = platform::StartCapture(
         [&](const int16_t* s, size_t n) {
+            if (Debug()) {
+                for (size_t i = 0; i < n; i++) {
+                    levelSum += double(s[i]) * s[i];
+                    levelPeak = std::max(levelPeak, std::abs(double(s[i])));
+                }
+                levelN += (long)n;
+                if (levelN >= kRate / 4) {
+                    static const auto t0 = std::chrono::steady_clock::now();
+                    std::fprintf(stderr, "[voice] %5.2f s niveau : rms %4.0f, crête %5.0f (plancher %.0f, seuil %.0f)\n", std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(), std::sqrt(levelSum / levelN), levelPeak, seg.Floor(), std::max(seg.Floor() * 3.0, kMinThreshold));
+                    levelSum = levelPeak = 0;
+                    levelN = 0;
+                }
+            }
             zeroRun = std::all_of(s, s + n, [](int16_t v) { return v == 0; }) ? zeroRun + (long long)n : 0;
             if (zeroRun > 5ll * kRate && !zeroReported) {
                 zeroReported = true;
@@ -341,11 +364,17 @@ void Worker() {
         g_running = false;
         return;
     }
-    Post("idle");
-
     auto awakeUntil = std::chrono::steady_clock::now();
-    long long seenListen = g_listenRequest;
-    while (!g_stop) {
+    if (Debug()) std::fprintf(stderr, "[voice] micro ouvert%s\n", g_oneShot ? " (une phrase, bouton)" : "");
+    if (g_oneShot) { // bouton micro : on écoute tout de suite la commande
+        g_awake = true;
+        awakeUntil += kAwakeWindow;
+        Post("awake");
+    } else {
+        Post("idle");
+    }
+    long long seenListen = g_listenRequest, seenCancel = g_cancelRequest;
+    while (!g_stop && !(g_oneShot && !g_awake)) {
         std::vector<float> pcm;
         {
             std::unique_lock<std::mutex> lock(g_queueMutex);
@@ -356,19 +385,34 @@ void Worker() {
                 g_queue.pop_front();
             }
         }
+        if (g_cancelRequest != seenCancel) {
+            seenCancel = g_cancelRequest;
+            seenListen = g_listenRequest;
+            if (g_awake) {
+                g_awake = false;
+                g_buttonListen = false;
+                Post("idle");
+                continue; // la phrase en cours d'écoute est jetée
+            }
+        }
         if (g_listenRequest != seenListen) {
             seenListen = g_listenRequest;
             g_awake = true;
             awakeUntil = std::chrono::steady_clock::now() + kAwakeWindow;
             Post("awake");
         }
+        // Quelqu'un parle encore : le délai ne coupe pas la phrase en cours (3 s de grâce après la dernière voix,
+        // le temps qu'elle arrive dans la file).
+        if (g_awake && seg.Speaking()) awakeUntil = std::max(awakeUntil, std::chrono::steady_clock::now() + std::chrono::seconds(3));
         if (g_awake && std::chrono::steady_clock::now() > awakeUntil && pcm.empty()) {
             g_awake = false;
+            g_buttonListen = false;
             Post("idle");
         }
         if (pcm.empty()) continue;
         if (g_awake) Post("working");
         std::string text = Transcribe(ctx, pcm, g_awake);
+        if (Debug()) std::fprintf(stderr, "[voice] transcrit : « %s »\n", text.c_str());
         std::string rest;
         // « Aeria, mets un minuteur… » d'une traite : le nom est trouvé, on refait la commande avec soin.
         if (!g_awake && FindWakeWord(text, rest) && !IsNoise(rest)) text = Transcribe(ctx, pcm, true);
@@ -378,6 +422,7 @@ void Worker() {
             Post("awake");
         }
     }
+    if (Debug()) std::fprintf(stderr, "[voice] micro fermé\n");
     platform::StopCapture();
     whisper_free(ctx);
     g_awake = false;
@@ -386,6 +431,7 @@ void Worker() {
         g_queue.clear();
     }
     g_running = false;
+    if (g_oneShot.exchange(false) && !g_stop && !g_want) Post("off"); // la phrase du bouton micro est passée : micro refermé
 }
 
 bool ModelPresent() {
@@ -432,6 +478,7 @@ void DownloadModel() {
         if (!ok) {
             Post("error", -1, error.empty() ? "Téléchargement impossible." : error);
         } else if (g_want) {
+            g_oneShot = false;
             StartLocked();
         } else {
             Post("off");
@@ -485,11 +532,19 @@ void Apply(bool enabled) {
     std::lock_guard<std::mutex> lock(g_lifecycle);
     if (g_want.exchange(enabled) == enabled) return;
     if (enabled) {
+        g_oneShot = false; // un micro ouvert par le bouton devient l'écoute permanente
         StartLocked();
     } else {
         StopLocked();
         if (!g_downloading) Post("off");
     }
+}
+
+void Shutdown() {
+    std::lock_guard<std::mutex> lock(g_lifecycle);
+    g_want = false;
+    g_oneShot = false;
+    StopLocked(); // joint aussi un worker déjà fini de lui-même (bouton micro) : sinon std::terminate à la sortie
 }
 
 void Command(const std::string& arg) {
@@ -505,10 +560,19 @@ void Command(const std::string& arg) {
     } else if (arg == "download") {
         DownloadModel();
     } else if (arg == "listen") {
+        std::lock_guard<std::mutex> lock(g_lifecycle);
+        g_buttonListen = true;
         if (g_running) {
             g_listenRequest++;
             g_queueCv.notify_all();
+        } else if (!g_downloading) { // bouton micro avec « Aeria » désactivé : micro ouvert le temps d'une phrase
+            g_oneShot = !g_want;
+            StartLocked();
+            if (!g_running) g_oneShot = g_buttonListen = false; // pas de modèle : StartLocked a déjà prévenu la page
         }
+    } else if (arg == "cancel") {
+        g_cancelRequest++;
+        g_queueCv.notify_all();
     }
 }
 

@@ -77,6 +77,7 @@
     <form class="ask stagger" id="askForm" autocomplete="off" style="--d:60ms">
       <i data-icon="sparkles"></i>
       <input id="askInput" placeholder="Demander à Aeria…" spellcheck="false">
+      <button type="button" class="mic-btn" data-mic title="Parler à Aeria"><i data-icon="mic"></i></button>
       <kbd>↵</kbd>
     </form>
 
@@ -161,8 +162,12 @@
         <div><b id="noKeyTitle"></b><p id="noKeyText"></p></div>
         <button type="button" class="primary" data-goto="settings">Réglages</button>
       </div>
+      <div class="attach-bar" id="attachBar" hidden></div>
       <form class="glass chat-composer" id="chatForm">
+        <button type="button" class="attach-btn" id="attachBtn" title="Joindre un fichier (image, PDF, texte)"><i data-icon="paperclip"></i></button>
+        <input type="file" id="attachInput" multiple hidden>
         <textarea id="chatInput" rows="1" placeholder="Écris à Aeria…" spellcheck="false"></textarea>
+        <button type="button" class="mic-btn" data-mic title="Parler à Aeria"><i data-icon="mic"></i></button>
         <button type="submit" class="send" id="sendBtn" title="Envoyer (Entrée)"><i data-icon="up" class="i-send"></i><i data-icon="stop" class="i-stop"></i></button>
       </form>
     </section>
@@ -213,6 +218,36 @@
         <div class="head-actions"><button type="button" class="primary" id="addNote"><i data-icon="plus"></i>Nouvelle note</button></div>
       </div>
       <div class="scroll"><div class="notes-grid" id="notesGrid"></div></div>
+
+      <!-- Note ouverte : remplit tout le panneau (js/features/notes.js) -->
+      <div class="note-editor nt-bg" id="noteEditor" aria-hidden="true">
+        <div class="ne-head">
+          <button type="button" class="icon-btn ne-back" id="neBack" title="Retour aux notes (Échap)"><i data-icon="chevron"></i></button>
+          <input class="ne-title" id="neTitle" placeholder="Titre de la note" maxlength="120" spellcheck="false" autocomplete="off">
+          <span class="ne-time" id="neTime"></span>
+          <button type="button" class="icon-btn" id="neThemeBtn" title="Thème de fond"><i data-icon="palette"></i></button>
+          <button type="button" class="icon-btn ne-del" id="neDel" title="Supprimer la note"><i data-icon="trash"></i></button>
+        </div>
+        <div class="ne-themes" id="neThemes"></div>
+        <div class="ne-tools" id="neTools">
+          <button type="button" data-cmd="bold" title="Gras (Ctrl+B)"><i data-icon="bold"></i></button>
+          <button type="button" data-cmd="italic" title="Italique (Ctrl+I)"><i data-icon="italic"></i></button>
+          <button type="button" data-cmd="underline" title="Souligné (Ctrl+U)"><i data-icon="underline"></i></button>
+          <button type="button" data-cmd="strike" title="Barré"><i data-icon="strike"></i></button>
+          <button type="button" data-cmd="mark" title="Surligner"><i data-icon="highlighter"></i></button>
+          <span class="ne-sep"></span>
+          <button type="button" class="txt" data-cmd="h1" title="Titre (# + espace)">H1</button>
+          <button type="button" class="txt" data-cmd="h2" title="Sous-titre (## + espace)">H2</button>
+          <span class="ne-sep"></span>
+          <button type="button" data-cmd="ul" title="Liste à puces (- + espace)"><i data-icon="list"></i></button>
+          <button type="button" data-cmd="ol" title="Liste numérotée (1. + espace)"><i data-icon="listOrdered"></i></button>
+          <button type="button" data-cmd="check" title="Liste à cocher ([] + espace)"><i data-icon="listChecks"></i></button>
+          <button type="button" data-cmd="quote" title="Citation (> + espace)"><i data-icon="quote"></i></button>
+          <span class="ne-sep"></span>
+          <button type="button" data-cmd="clear" title="Effacer la mise en forme"><i data-icon="eraser"></i></button>
+        </div>
+        <div class="ne-body" id="neBody" contenteditable="true" spellcheck="false" data-ph="Écris ta note…"></div>
+      </div>
     </section>
 
     <!-- Minuteur : temps limité (compte à rebours) ou illimité (chronomètre) -->
@@ -492,6 +527,7 @@
     <div class="whatsnew-actions"><button type="button" class="primary" id="whatsNewClose">Compris</button></div>
   </div>
 
+  <div class="drop-hint" aria-hidden="true"><i data-icon="paperclip"></i>Dépose le fichier pour l’envoyer à Aeria</div>
   <div class="toast" id="toast"></div>
   <script type="module" src="js/main.js"></script>
 </body>

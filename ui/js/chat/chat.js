@@ -6,27 +6,31 @@ import { settings, openSettingsPage } from '../core/settings.js';
 import { S } from '../core/state.js';
 import { fmtWhen } from '../core/format.js';
 import { renderKey, updateNoKey } from './connection.js';
-import { switchTab } from '../dock/dock.js';
+import { switchTab, openTab } from '../dock/dock.js';
 import { contextBlock, remindersContext, todosContext, stripActions } from './prompts.js';
 import { foundFor, foundContext, openPath, folderOf, fmtDay } from '../features/files.js';
 import { md } from './markdown.js';
 import { streamStep } from './api.js';
 import { ccStep } from './pro.js';
-import { freeStep, freeReady } from './free.js';
+import { freeStep, freeReady, freeService } from './free.js';
+import { setupAttach, attachments, clearAttachments, hasAttachments, restoreAttachments, unsupported, attachmentBlocks, forStorage, sentChipsHTML } from './attach.js';
 
 // Le prompt système n'est pas gardé dans la conversation : il est recalculé à chaque message
 // (buildSystem), pour qu'une ancienne conversation connaisse les capacités ajoutées depuis.
 const newConvo = () => ({ id: uid(), backend: settings.backend, messages: [], created: Date.now() });
 
 let convo = store.get('convo', null) || newConvo();
+// Images et PDF ne sont pas gardés dans le stockage local (voir forStorage dans attach.js).
+const saveConvo = () => store.set('convo', { ...convo, messages: convo.messages.map(forStorage) });
 let turn = null;      // tour en cours : { reqId, blocks, stop, startLen, userText, loops, ... }
 let chatNotice = null;
 
 // Secours gratuit possible : activé dans les réglages, clé du service enregistrée, et Claude choisi.
 const canFallback = () => settings.category === 'claude' && settings.freeFallback && freeReady();
 
-function sendChat(text) {
-  text = text.trim();
+function sendChat(typed) {
+  const files = attachments();
+  const text = typed.trim() || (files.length ? `Regarde ${files.length > 1 ? 'ces fichiers' : 'ce fichier'}.` : '');
   if (!text || turn) return;
   const backend = settings.backend;
   const pro = backend === 'pro';
@@ -45,16 +49,25 @@ function sendChat(text) {
     if (convo.messages.length) toast('Nouvelle conversation (mode de connexion changé)');
     convo = newConvo();
   }
+  const route = fallback || direct ? freeService() : pro ? 'pro' : 'api';
+  const blocked = unsupported(files, route);
+  if (blocked) { toast(blocked); return; }
   chatNotice = null;
+  clearAttachments();
   const startLen = convo.messages.length;
   const ctx = contextBlock();
-  convo.messages.push({ role: 'user', content: [{ type: 'text', text: ctx }, { type: 'text', text }] });
-  turn = { startLen, userText: text, loops: 0, blocks: [], via: fallback ? { reason: fallback } : null };
+  const fileBlocks = attachmentBlocks(files);
+  const msg = { role: 'user', content: [{ type: 'text', text: ctx }, ...fileBlocks, { type: 'text', text }] }; // le texte de l'utilisateur reste en dernier
+  if (files.length) msg.files = files.map(({ name, kind, size }) => ({ name, kind, size }));
+  convo.messages.push(msg);
+  turn = { startLen, userText: typed.trim(), files, loops: 0, blocks: [], via: fallback ? { reason: fallback } : null };
   renderChat();
   scrollChat(true);
   if (fallback || direct) freeStep();
-  else if (pro) ccStep([ctx, remindersContext(), todosContext(), foundContext()].filter(Boolean).join('\n') + `\n\n${text}`);
-  else streamStep();
+  else if (pro) {
+    const attached = fileBlocks.map((b) => b.text).join('\n\n'); // en mode Pro, seulement du texte (voir unsupported)
+    ccStep([ctx, remindersContext(), todosContext(), foundContext()].filter(Boolean).join('\n') + `\n\n${attached ? `${attached}\n\n` : ''}${text}`);
+  } else streamStep();
 }
 
 // Claude a échoué (quota, connexion, clé…) : on rejoue le message avec le modèle gratuit.
@@ -119,6 +132,7 @@ function rollback(message, fallback = false) {
   convo.messages.length = turn.startLen;
   const input = $('#chatInput');
   if (!input.value.trim()) { input.value = turn.userText; autosize(input, 140); }
+  restoreAttachments(turn.files);
   chatNotice = message;
   endTurn();
 }
@@ -126,7 +140,7 @@ function rollback(message, fallback = false) {
 function endTurn() {
   turn = null;
   setStreaming(false);
-  store.set('convo', convo);
+  saveConvo();
   renderChat();
   scrollChat(false);
 }
@@ -251,7 +265,7 @@ function renderChat() {
   for (const m of msgs) {
     if (m.role === 'user') {
       const texts = m.content.filter((c) => c.type === 'text');
-      if (texts.length) { groups.push({ type: 'user', text: texts[texts.length - 1].text }); cur = null; }
+      if (texts.length) { groups.push({ type: 'user', text: texts[texts.length - 1].text, files: m.files }); cur = null; }
       continue;
     }
     if (!cur) { cur = { type: 'assistant', blocks: [] }; groups.push(cur); }
@@ -277,7 +291,7 @@ function renderChat() {
       </div></div>`;
   } else {
     chat.innerHTML = groups.map((g) => {
-      if (g.type === 'user') return `<div class="msg user"><div class="bubble">${esc(g.text)}</div></div>`;
+      if (g.type === 'user') return `<div class="msg user"><div class="bubble">${g.files?.length ? sentChipsHTML(g.files) : ''}${esc(g.text)}</div></div>`;
       const live = !!g.live;
       if (live) { liveCommitted = g.blocks; liveResults = results; }
       const blocks = live ? [...g.blocks, ...turn.blocks] : g.blocks;
@@ -329,7 +343,7 @@ function setupChat() {
     e.preventDefault();
     if (turn) { send('cancel', turn.reqId); return; }
     const text = input.value;
-    if (!text.trim()) return;
+    if (!text.trim() && !hasAttachments()) return;
     input.value = '';
     autosize(input, 140);
     sendChat(text);
@@ -338,7 +352,7 @@ function setupChat() {
     if (turn) return;
     convo = newConvo();
     chatNotice = null;
-    store.set('convo', convo);
+    saveConvo();
     renderChat();
     focusComposer();
   });
@@ -354,10 +368,11 @@ function setupChat() {
       navigator.clipboard?.writeText(text).then(() => toast('Copié'), () => toast('Copie impossible'));
     }
   });
+  setupAttach(() => { openTab('claude'); focusComposer(); });
   $('[data-goto="settings"]').addEventListener('click', () => { switchTab('settings'); openSettingsPage('aeria'); });
 }
 
 export {
-  convo, turn, sendChat, handleEvent, rollback, endTurn, setStreaming,
+  convo, turn, sendChat, saveConvo, handleEvent, rollback, endTurn, setStreaming,
   renderChat, scheduleLive, scrollChat, focusComposer, setupChat,
 };

@@ -174,3 +174,53 @@ details.think[open] summary .ic { rotate: 180deg; }
 .streaming .send .i-stop { opacity: 1; transform: none; }
 .send .i-stop { fill: currentColor; }
 @keyframes pulse { to { box-shadow: 0 0 0 10px transparent; } }
+
+/* Pièces jointes : pastilles au-dessus de la saisie, dans les messages envoyés, et indice de dépôt. */
+.attach-btn { display: grid; place-items: center; flex: none; align-self: flex-end; width: 32px; height: 32px; margin-left: -8px; border-radius: 50%; color: var(--fg3); }
+.attach-btn:hover { background: var(--hover); color: var(--fg); }
+.attach-btn .ic { width: 17px; height: 17px; color: inherit; }
+.attach-bar { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.att-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  height: 30px;
+  padding: 0 4px 0 8px;
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+  background: var(--hover);
+  color: var(--fg2);
+  font-size: 12px;
+}
+.att-chip > .ic { width: 14px; height: 14px; flex: none; }
+.att-chip img { width: 22px; height: 22px; flex: none; border-radius: 5px; object-fit: cover; }
+.att-chip small { flex: none; color: var(--fg3); font-size: 10.5px; }
+.att-name { min-width: 0; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.att-chip button { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 7px; color: var(--fg3); }
+.att-chip button:hover { background: var(--press); color: var(--fg); }
+.att-chip button .ic { width: 12px; height: 12px; }
+.att-sent { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+.msg.user .att-chip { height: 26px; padding: 0 9px; border-color: rgba(255, 255, 255, .28); background: rgba(255, 255, 255, .16); color: #fff; }
+.drop-hint {
+  position: fixed;
+  top: calc(var(--inset) + var(--bar-h) + 14px);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 70%, transparent);
+  border-radius: 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 55%, #1a1a24), color-mix(in srgb, var(--accent) 40%, #1a1a24));
+  color: #fff;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -6px);
+  transition: opacity .2s, transform .35s var(--spring);
+  z-index: 5;
+}
+.drop-hint .ic { width: 16px; height: 16px; }
+body.dropping .drop-hint { opacity: 1; transform: translate(-50%, 0); }
+body.dropping .chat-composer { border-color: color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent), 0 0 30px -10px var(--accent); }

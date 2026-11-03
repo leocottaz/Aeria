@@ -165,6 +165,15 @@ gboolean DrawNothing(GtkWidget*, cairo_t* cr, gpointer) {
     return TRUE;
 }
 
+void OpenForDrag(); // défini après SetState
+
+// Des fichiers glissés sur la bande : on ouvre le panneau (sans rien accepter ici, le dépôt se fait dessus).
+gboolean OnEdgeDragMotion(GtkWidget* w, GdkDragContext* ctx, gint, gint, guint time, gpointer) {
+    if (gtk_drag_dest_find_target(w, ctx, nullptr) != GDK_NONE) OpenForDrag();
+    gdk_drag_status(ctx, static_cast<GdkDragAction>(0), time);
+    return TRUE;
+}
+
 // Une bande par écran sans voisin au-dessus, de la largeur du dock.
 void RebuildEdges() {
     if (!g_xwayland) return;
@@ -180,6 +189,9 @@ void RebuildEdges() {
         if (GdkVisual* rgba = gdk_screen_get_rgba_visual(gtk_widget_get_screen(edge))) gtk_widget_set_visual(edge, rgba);
         g_signal_connect(edge, "draw", G_CALLBACK(DrawNothing), nullptr);
         WatchCrossing(edge, &g_onEdge);
+        GtkTargetEntry uris{const_cast<gchar*>("text/uri-list"), 0, 0}; // fichiers glissés depuis le gestionnaire de fichiers
+        gtk_drag_dest_set(edge, static_cast<GtkDestDefaults>(0), &uris, 1, GDK_ACTION_COPY); // on gère le mouvement nous-mêmes
+        g_signal_connect(edge, "drag-motion", G_CALLBACK(OnEdgeDragMotion), nullptr);
         gtk_window_set_default_size(GTK_WINDOW(edge), g_cfg.width, 1);
         gtk_window_move(GTK_WINDOW(edge), cx - g_cfg.width / 2, m.t);
         gtk_widget_show(edge);
@@ -477,6 +489,16 @@ void SetListening(bool on) {
     } else if (g_state == State::Listen) {
         SetState(RestState());
     }
+}
+
+// Des fichiers sont glissés au bord haut de l'écran : le panneau s'ouvre sur le chat, sans prendre le focus.
+void OpenForDrag() {
+    if (ForegroundIsFullscreen()) return;
+    if (g_state != State::Panel) {
+        SetState(State::Panel);
+        bridge::PostToPage("{\"t\":\"show\",\"tab\":\"claude\"}");
+    }
+    HoldUntilHovered(8000);
 }
 
 // ------------------------------------------------------------------ entrées

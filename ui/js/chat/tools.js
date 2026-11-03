@@ -192,7 +192,7 @@ async function execTool(name, input, key = '') {
   if (name === 'create_note') {
     const text = typeof input.text === 'string' ? input.text.trim() : '';
     if (!text) throw new Error('La note est vide.');
-    addNote(text, false);
+    addNote(text);
     return 'Note ajoutée au carnet.';
   }
   if (name === 'create_todo') {

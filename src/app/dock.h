@@ -16,6 +16,7 @@ constexpr wchar_t kClassName[] = L"AeriaDock";
 constexpr UINT WM_APP_SUMMON = WM_APP + 3; // envoyé par une 2e instance : ouvrir le panneau
 constexpr UINT WM_APP_OPEN = WM_APP + 5;   // OpenPanelAsync : ouvrir le panneau (sans le refermer s'il l'est déjà)
 constexpr UINT WM_APP_LISTEN = WM_APP + 6; // SetListeningAsync : WPARAM = 1 (écoute) ou 0
+constexpr UINT WM_APP_DRAG = WM_APP + 7;   // drop_edge : des fichiers glissés arrivent au bord haut de l'écran
 #endif
 
 struct Config {

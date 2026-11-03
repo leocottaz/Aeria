@@ -200,7 +200,7 @@ function setupGlobal() {
     g.style.setProperty('--my', `${e.clientY - r.top}px`);
   }, { passive: true });
   document.addEventListener('contextmenu', (e) => {
-    if (!e.target.closest('input, textarea, .md, .bubble')) e.preventDefault();
+    if (!e.target.closest('input, textarea, .md, .bubble, .ne-body')) e.preventDefault();
   });
 }
 

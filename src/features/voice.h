@@ -15,8 +15,12 @@ namespace voice {
 // Réglage « voiceWake » : démarre ou arrête l'écoute. Sans modèle, annonce « nomodel ».
 void Apply(bool enabled);
 
+// À la fermeture de l'appli : arrête le micro et attend la fin du thread d'écoute.
+void Shutdown();
+
 // Commandes de la page : « status » (renvoie l'état), « download » (télécharge le modèle),
-// « listen » (écoute la prochaine phrase sans attendre « Aeria »).
+// « listen » (écoute la prochaine phrase sans attendre « Aeria » : si l'écoute permanente est désactivée,
+// le micro ne s'ouvre que le temps de cette phrase), « cancel » (arrête cette écoute).
 void Command(const std::string& arg);
 
 // Cherche « Aeria » (ou une variante de transcription : « Éria », « Aria »…) dans un texte. Vrai s'il est

@@ -8,6 +8,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <mutex>
@@ -55,14 +56,18 @@ bool StartCapture(const Sink& sink, std::string&) {
         auto feed = [&](const std::vector<int16_t>& pcm) {
             for (size_t i = 0; i < pcm.size() && g_run; i += 320) {
                 sink(pcm.data() + i, std::min<size_t>(320, pcm.size() - i));
-                std::this_thread::sleep_for(std::chrono::milliseconds(4)); // 5x le temps réel
+                std::this_thread::sleep_for(std::chrono::milliseconds(std::getenv("AERIA_REALTIME") ? 20 : 4)); // 5x le temps réel (AERIA_REALTIME=1 : temps réel)
             }
         };
-        std::vector<int16_t> gap(16000 * 2);
+        const char* gapMs = std::getenv("AERIA_GAP_MS"); // silence avant chaque phrase (2 s par défaut)
+        std::vector<int16_t> gap(16 * (gapMs ? std::atoi(gapMs) : 2000));
         for (size_t i = 0; i < gap.size(); i++) gap[i] = (int16_t)((i * 7919) % 41 - 20); // bruit de fond léger
         feed(gap);
         for (const auto& w : g_wavs) {
-            feed(ReadWav(w));
+            auto pcm = ReadWav(w);
+            if (const char* scale = std::getenv("AERIA_SCALE")) // micro faible : AERIA_SCALE=0.05 réduit le volume à 5 %
+                for (auto& v : pcm) v = (int16_t)(v * std::atof(scale));
+            feed(pcm);
             feed(gap);
         }
         g_feeding = false;
@@ -118,11 +123,13 @@ int main(int argc, char** argv) {
     g_model = argv[1];
     for (int i = 2; i < argc; i++) g_wavs.push_back(argv[i]);
     g_feeding = true;
-    voice::Apply(true);
+    // AERIA_ONESHOT=1 : comme le bouton micro, écoute permanente éteinte (« listen » ouvre le micro pour une phrase)
+    if (std::getenv("AERIA_ONESHOT")) voice::Command("listen");
+    else voice::Apply(true);
     auto t0 = std::chrono::steady_clock::now();
     while (g_feeding && std::chrono::steady_clock::now() - t0 < std::chrono::seconds(120)) std::this_thread::sleep_for(std::chrono::milliseconds(100));
     std::this_thread::sleep_for(std::chrono::seconds(6)); // le temps de finir les dernières transcriptions
-    voice::Apply(false);
+    voice::Shutdown();
     int heard = 0;
     for (const auto& p : g_posts) if (p.find("\"heard\"") != std::string::npos) heard++;
     std::printf("RESULTAT opens=%d heard=%d\n", g_opens.load(), heard);

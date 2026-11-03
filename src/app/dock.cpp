@@ -1,6 +1,7 @@
 #include "app/dock.h"
 
 #include "app/autostart.h"
+#include "app/drop_edge.h"
 #include "app/tray.h"
 #include "common/util.h"
 #include "features/media.h"
@@ -289,6 +290,10 @@ void Poll() {
     InflateRect(&tab, Px(6), Px(4));
     bool overTab = g_cfg.mode == 1 && !fullscreen && PtInRect(&tab, p);
     bool wantsReveal = (atTopEdge || overTab) && !mouseDown && (!fullscreen || g_cfg.fullscreenReveal);
+    // Bande qui reconnaît des fichiers glissés vers le bord haut (même largeur et mêmes conditions que atTopEdge).
+    RECT strip{cx - half, m.top, cx + half, m.top + std::max(2, Px(2))};
+    if (MonitorFromPoint({cx, m.top - 1}, MONITOR_DEFAULTTONULL)) strip = {};
+    drop_edge::Place(strip, mouseDown);
     if (g_waitLeave) {
         if (!wantsReveal) g_waitLeave = false;
         wantsReveal = false;
@@ -355,6 +360,17 @@ void Poll() {
             break;
         }
     }
+}
+
+// Des fichiers sont glissés au bord haut de l'écran : le panneau s'ouvre sur le chat, sans prendre le focus
+// (le glisser continue dans l'appli d'origine), pour qu'on les dépose dessus.
+void OpenForDrag() {
+    if (ForegroundIsFullscreen() && !g_cfg.fullscreenReveal) return;
+    if (g_state != State::Panel) {
+        SetState(State::Panel);
+        bridge::PostToPage("{\"t\":\"show\",\"tab\":\"claude\"}");
+    }
+    HoldUntilHovered(8000);
 }
 
 // « Aeria » entendu : une encoche s'ouvre tant que la voix écoute. Barre ou panneau ouverts, c'est leur champ
@@ -443,6 +459,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         case WM_APP_LISTEN:
             SetListening(wp != 0);
             return 0;
+        case WM_APP_DRAG:
+            OpenForDrag();
+            return 0;
         case WM_HOTKEY:
             if (wp == HOTKEY_TOGGLE) ToggleFromHotkey();
             return 0;
@@ -474,6 +493,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             return 0;
         case WM_DESTROY:
             UnregisterHotKey(hwnd, HOTKEY_TOGGLE);
+            voice::Shutdown();
             tray::Remove();
             webview::Close();
             PostQuitMessage(0);
@@ -505,6 +525,7 @@ HWND Create(HINSTANCE instance) {
 
     g_taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
     tray::Init(g_hwnd);
+    drop_edge::Create(instance, g_hwnd, WM_APP_DRAG);
     RegisterHotKey(g_hwnd, HOTKEY_TOGGLE, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_SPACE);
     SetTimer(g_hwnd, TIMER_POLL, 30, nullptr);
     SetTimer(g_hwnd, TIMER_REMINDERS, 1000, nullptr);

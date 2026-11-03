@@ -26,6 +26,7 @@ add_executable(Aeria WIN32
 
         # app/ : la fenêtre du dock et son intégration à Windows
         src/app/dock.cpp                # fenêtre, états, animations, souris, raccourci, menu
+        src/app/drop_edge.cpp           # bande du bord haut qui reconnaît un glisser de fichiers
         src/app/tray.cpp                # icône de notification, bulles
         src/app/autostart.cpp           # lancement au démarrage
         src/app/aeria.rc     # icône de l'exécutable

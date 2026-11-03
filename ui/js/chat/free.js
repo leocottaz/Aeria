@@ -6,7 +6,7 @@ import { store, toast } from '../core/util.js';
 import { http } from '../core/bridge.js';
 import { settings } from '../core/settings.js';
 import { S } from '../core/state.js';
-import { convo, turn, rollback, endTurn, setStreaming, renderChat, scheduleLive } from './chat.js';
+import { convo, turn, saveConvo, rollback, endTurn, setStreaming, renderChat, scheduleLive } from './chat.js';
 import { TOOLS, execTool } from './tools.js';
 import { buildSystem, stripActions } from './prompts.js';
 
@@ -96,8 +96,14 @@ function toOpenAI(messages) {
       for (const r of content.filter((c) => c.type === 'tool_result')) {
         out.push({ role: 'tool', tool_call_id: r.tool_use_id, content: typeof r.content === 'string' ? r.content : JSON.stringify(r.content) });
       }
-      const text = content.filter((c) => c.type === 'text').map((c) => c.text).join('\n');
-      if (text) out.push({ role: 'user', content: text });
+      let text = content.filter((c) => c.type === 'text').map((c) => c.text).join('\n');
+      // Images : Gemini et OpenAI les lisent (image_url) ; Groq et les PDF, non (jamais lus par ces modèles).
+      const images = service() === 'groq' ? [] : content.filter((c) => c.type === 'image');
+      if (content.some((c) => c.type === 'document' || (c.type === 'image' && !images.includes(c)))) text += '\n[Un fichier joint n’a pas pu être transmis à ce modèle.]';
+      if (images.length) {
+        const parts = images.map((c) => ({ type: 'image_url', image_url: { url: `data:${c.source.media_type};base64,${c.source.data}` } }));
+        out.push({ role: 'user', content: [{ type: 'text', text }, ...parts] });
+      } else if (text) out.push({ role: 'user', content: text });
     } else {
       const text = content.filter((c) => c.type === 'text').map((c) => stripActions(c.text, false).trim()).filter(Boolean).join('\n\n');
       const calls = content.filter((c) => c.type === 'tool_use')
@@ -196,7 +202,7 @@ async function onFreeDone(cancelled) {
     if (turn !== t) return; // annulé entre-temps
     convo.messages.push({ role: 'user', content: results });
     t.loops++;
-    store.set('convo', convo);
+    saveConvo();
     renderChat();
     freeStep();
     return;

@@ -34,6 +34,8 @@ function buildSystem(backend) {
     + 'avec un Markdown léger (listes courtes, gras, blocs de code) seulement quand cela aide. '
     + "Chaque message de l'utilisateur commence par un bloc [Contexte] donnant la date et l'heure locales (sers-t'en pour les heures des rappels) "
     + "et, s'il écoute de la musique, le morceau en cours : utilise-le quand il en parle (« c'est quoi ce son ? »). ";
+  s += "Il peut joindre des fichiers à son message (image, PDF, texte ou code) : le texte est recopié entre balises <fichier>, "
+    + "images et PDF sont donnés en pièces jointes. Appuie-toi dessus sans les recopier en entier. ";
   s += backend === 'pro'
     ? `\n\n${PRO_ACTIONS}`
     : 'Quand on te demande un rappel, une note, une tâche (to-do), une recherche de fichier, une routine ou un minuteur, '
