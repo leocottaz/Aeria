@@ -9,6 +9,7 @@ import { setState, switchTab, tick, setupBar, setupGlobal, onWheel } from './doc
 import { fireReminder, renderReminders, saveReminders, setupReminders } from './features/reminders.js';
 import { renderNotes, setupNotes } from './features/notes.js';
 import { renderTodos, setupTodo } from './features/todo.js';
+import { setupToday, renderToday } from './features/today.js';
 import { setupRoutines } from './features/routines.js';
 import { setupTimer, renderTimer, finishTimer, syncTimer } from './features/timer.js';
 import { renderChat, focusComposer, setupChat } from './chat/chat.js';
@@ -76,6 +77,7 @@ function init() {
   setupReminders();
   setupNotes();
   setupTodo();
+  setupToday();
   setupRoutines();
   setupTimer();
   setupChat();
@@ -96,6 +98,7 @@ function init() {
   setInterval(() => {
     tick();
     if (S.st === 'panel' && S.tab === 'reminders') renderReminders(false);
+    if (S.st === 'panel' && S.tab === 'today') renderToday();
   }, 1000);
 
   if (bridge) {

@@ -39,6 +39,17 @@ function completeTodo(text) {
   return t;
 }
 
+// Pour la vue Aujourd'hui : coche (ou décoche) une tâche par son id.
+function setTodoDone(id, done) {
+  const t = todos.find((x) => x.id === id);
+  if (!t) return null;
+  t.done = done;
+  t.doneAt = done ? Date.now() : 0;
+  save();
+  renderTodos();
+  return t;
+}
+
 function todoHTML(t) {
   return `<div class="todo glass${t.done ? ' done' : ''}${t.star ? ' star' : ''}${t.id === fresh ? ' fresh' : ''}" data-id="${t.id}">
     <button type="button" class="todo-check" data-act="toggle" title="${t.done ? 'Remettre à faire' : 'Fait'}">${icon('check')}</button>
@@ -133,4 +144,4 @@ function setupTodo() {
   });
 }
 
-export { addTodo, completeTodo, openTodos, doneTodos, renderTodos, setupTodo };
+export { addTodo, completeTodo, setTodoDone, openTodos, doneTodos, renderTodos, setupTodo };

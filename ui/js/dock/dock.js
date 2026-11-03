@@ -9,6 +9,7 @@ import { scrollChat, focusComposer, sendChat } from '../chat/chat.js';
 import { resumeMusicLoop } from '../features/music.js';
 import { setMiniAlerts, miniTab } from './mini.js';
 import { renderTimer, timerLabel, timerRinging } from '../features/timer.js';
+import { renderToday } from '../features/today.js';
 
 function setState(st, info = {}) {
   const prev = S.st;
@@ -32,6 +33,7 @@ function setState(st, info = {}) {
   if (st === 'panel') {
     moveNav(false);
     if (S.tab === 'claude') scrollChat(true);
+    if (S.tab === 'today') renderToday();
     if (S.tab === 'reminders') renderReminders();
     if (S.tab === 'timer') renderTimer();
   }
@@ -46,10 +48,13 @@ function startStrip(delay) {
   fill.style.width = '100%';
 }
 
-// Onglets de la barre, dans l'ordre (Ctrl+1…6). Claude n'y a pas de bouton : on y accède par
-// l'orbe, le champ « Demander » et Ctrl+Alt+Espace.
-const NAV_TABS = ['reminders', 'todo', 'music', 'notes', 'timer', 'settings'];
-const TABS = [...NAV_TABS, 'claude'];
+// Boutons de la barre, dans l'ordre. Les autres écrans s'ouvrent depuis Aujourd'hui (titre d'une
+// carte), Ctrl+1…7 (SHORTCUTS) ou Aeria : l'orbe, le champ « Demander » et Ctrl+Alt+Espace.
+const NAV_TABS = ['today', 'notes', 'settings'];
+const SHORTCUTS = ['today', 'reminders', 'todo', 'music', 'notes', 'timer', 'settings'];
+const TABS = [...SHORTCUTS, 'claude'];
+// Bouton allumé pour chaque écran : ceux d'Aujourd'hui y sont rattachés.
+const navOf = (tab) => (['reminders', 'todo', 'music', 'timer'].includes(tab) ? 'today' : tab);
 
 function switchTab(tab) {
   if (!TABS.includes(tab)) return;
@@ -58,16 +63,17 @@ function switchTab(tab) {
   settings.lastTab = tab;
   store.set('settings', settings);
   $$('.view').forEach((v) => v.classList.toggle('active', v.dataset.view === tab));
-  $$('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  $$('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.tab === navOf(tab)));
   moveNav(changed);
   if (tab === 'claude') scrollChat(true);
+  if (tab === 'today') renderToday();
   if (tab === 'reminders') renderReminders();
   if (tab === 'timer') renderTimer();
 }
 
 function moveNav(stretch) {
   const ind = $('#navIndicator');
-  const i = NAV_TABS.indexOf(S.tab);
+  const i = NAV_TABS.indexOf(navOf(S.tab));
   ind.classList.toggle('off', i < 0); // onglet sans bouton (Claude)
   if (i < 0) return;
   ind.style.setProperty('--i', i);
@@ -107,8 +113,7 @@ function tick() {
   const badge = $('#orbBadge');
   badge.hidden = !pending.length;
   badge.textContent = pending.length;
-  $('#remDot').hidden = !pending.length;
-  $('#timerDot').hidden = !timerRinging();
+  $('#todayDot').hidden = !pending.length && !timerRinging(); // rappel sonné ou minuteur fini
   setMiniAlerts(pending.length + (timerRinging() ? 1 : 0)); // cloche du mini-dock quand le dock est rangé
 }
 
@@ -133,6 +138,7 @@ function setupBar() {
   });
   $('#orb').addEventListener('click', () => openTab(alertTab() || 'claude'));
   $('#npOpen').addEventListener('click', () => openTab('music'));
+  $('#np .np-text').addEventListener('click', () => openTab('music')); // toute la pilule ouvre la musique, sauf lecture/pause
   $('#mcardOpen').addEventListener('click', () => openTab('music'));
   $('#pill').addEventListener('click', (e) => openTab(e.target.closest('#pillTimer') ? 'timer' : alertTab() || miniTab()));
 }
@@ -165,7 +171,7 @@ function onWheel({ x, y, dy, debug }) {
 function setupGlobal() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { send('hide'); return; }
-    if (e.ctrlKey && !e.altKey && /^[1-6]$/.test(e.key)) { e.preventDefault(); openTab(NAV_TABS[+e.key - 1]); }
+    if (e.ctrlKey && !e.altKey && /^[1-7]$/.test(e.key)) { e.preventDefault(); openTab(SHORTCUTS[+e.key - 1]); }
   });
   // reflet spéculaire qui suit la souris sur les surfaces de verre
   document.addEventListener('pointermove', (e) => {

@@ -1,0 +1,60 @@
+/* Vue Aujourd'hui. (.todo-check : todo.css · .icon-btn.snooze : reminders.css.) */
+
+.today-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 10px; align-items: start; }
+.td-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.td-card { padding: 10px 12px 12px; border-radius: 16px; }
+.td-card.ringing { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 20%, transparent), var(--glass-b)); }
+
+.td-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.td-head button { justify-content: flex-start; gap: 7px; height: 24px; padding: 0 4px 0 0; color: var(--fg3); font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; }
+.td-head button:hover { color: var(--fg); }
+.td-head .ic { width: 14px; height: 14px; }
+.td-head button > .ic:last-child { width: 12px; height: 12px; rotate: -90deg; }
+.td-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--field); color: var(--fg2); font-size: 11px; font-weight: 700; line-height: 20px; text-align: center; }
+
+.td-row { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 4px 2px; }
+.td-row + .td-row { border-top: 1px solid var(--stroke); }
+.td-ico { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--field); color: var(--fg2); }
+.td-ico .ic { width: 14px; }
+.td-body { flex: 1; min-width: 0; }
+.td-body b { display: block; overflow: hidden; font-size: 13px; font-weight: 550; white-space: nowrap; text-overflow: ellipsis; }
+.td-body small { display: block; overflow: hidden; color: var(--fg2); font-size: 11.5px; white-space: nowrap; text-overflow: ellipsis; }
+.td-body .in { color: var(--accent); font-weight: 600; }
+.theme-light .td-body .in { filter: brightness(.8); }
+.td-actions { display: flex; gap: 2px; }
+.td-actions .icon-btn { width: 28px; height: 28px; }
+.td-actions .ok:hover { color: #3ddc84; }
+.td-row.pending .td-ico { background: var(--accent); color: #fff; }
+.td-row.pending .td-ico .ic { transform-origin: 50% 10%; }
+.td-star { width: 14px; height: 14px; flex: none; color: #ffb547; fill: currentColor; }
+.td-row .todo-check { width: 20px; height: 20px; }
+.td-row.checking .todo-check { border-color: #3ddc84; background: #3ddc84; box-shadow: 0 0 12px -2px #3ddc84; animation: pop .4s var(--spring); }
+.td-row.checking .todo-check .ic { stroke-dashoffset: 0; }
+.td-row.checking .td-title { color: var(--fg3); text-decoration: line-through; transition: color .3s; }
+
+.td-empty { padding: 8px 2px; color: var(--fg3); font-size: 12.5px; }
+.td-more { justify-content: flex-start; height: 24px; padding: 0 2px; color: var(--fg3); font-size: 11.5px; font-weight: 600; }
+.td-more:hover { color: var(--fg); }
+
+.td-add { display: flex; align-items: center; gap: 8px; height: 34px; margin-top: 6px; padding: 0 10px; border-radius: 11px; background: var(--field); }
+.td-add .ic { width: 14px; flex: none; color: var(--accent); }
+.td-add input:not([type=checkbox]) { flex: 1; min-width: 0; padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; font-size: 13px; }
+
+.td-timer { display: flex; align-items: center; gap: 8px; }
+.td-clock { flex: 1; min-width: 0; }
+.td-time { font: 650 30px/1 var(--font-d); font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+.td-sub { margin-top: 4px; color: var(--fg2); font-size: 11.5px; }
+.td-round { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; box-shadow: 0 6px 16px -6px var(--accent); transition: transform .3s var(--spring); }
+.td-round:hover { transform: scale(1.08); }
+.td-round .ic { width: 16px; }
+.td-bar { height: 4px; margin-top: 12px; overflow: hidden; border-radius: 2px; background: var(--press); }
+.td-bar span { display: block; width: calc(var(--p, 0) * 100%); height: 100%; border-radius: 2px; background: var(--accent); transition: width 1s linear; }
+
+/* Retour à Aujourd'hui, dans l'en-tête des écrans ouverts depuis une carte. */
+.view-head > .back { align-self: center; flex: none; width: 30px; height: 30px; margin-right: 2px; }
+.view-head > .back .ic { rotate: 90deg; }
+.view-head > .back + div { margin-right: auto; }
+
+@media (max-width: 600px) {
+  .today-grid { grid-template-columns: minmax(0, 1fr); }
+}

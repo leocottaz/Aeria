@@ -198,6 +198,19 @@ function timerLabel() {
 
 const timerRinging = () => T.ringing;
 
+// Pour la vue Aujourd'hui : état (idle, running, paused, ringing), temps affiché et part restante (0 à 1).
+function timerCard() {
+  const down = T.mode === 'down';
+  const e = elapsedNow();
+  return {
+    state: T.ringing ? 'ringing' : idle() ? 'idle' : running() ? 'running' : 'paused',
+    text: T.ringing ? fmtClock(0) : down ? fmtClock(idle() ? T.duration : remaining()) : fmtClock(e, true),
+    p: down ? (T.duration ? remaining() / T.duration : 0) : (e % 60e3) / 60e3,
+  };
+}
+
+const toggleTimer = () => (running() ? pause() : start());
+
 // Temps dans le mini-dock (option de l'onglet). Fenêtre visible = page éveillée : la pilule peut
 // compter elle-même. Calée sur le changement de seconde, pour ne jamais sauter un chiffre.
 // Une fois terminé, c'est la cloche du mini-dock qui prend le relais.
@@ -294,5 +307,6 @@ function setupTimer() {
 
 export {
   setupTimer, renderTimer, finishTimer, timerLabel, timerRinging, syncTimer, parseDuration,
+  timerCard, toggleTimer, stopRinging, resetTimer,
   startCountdown, startStopwatch, pauseTimer, resumeTimer, stopTimer, timerStatus,
 };

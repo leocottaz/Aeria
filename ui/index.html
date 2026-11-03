@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/dock.css">
   <link rel="stylesheet" href="css/reminders.css">
+  <link rel="stylesheet" href="css/today.css">
   <link rel="stylesheet" href="css/todo.css">
   <link rel="stylesheet" href="css/chat.css">
   <link rel="stylesheet" href="css/music.css">
@@ -82,20 +83,26 @@
 
     <nav class="nav stagger" id="nav" style="--d:120ms">
       <span class="nav-indicator" id="navIndicator"></span>
-      <button type="button" data-tab="reminders" title="Rappels (Ctrl+1)"><i data-icon="bell"></i><span class="dot" id="remDot" hidden></span></button>
-      <button type="button" data-tab="todo" title="To-do (Ctrl+2)"><i data-icon="todo"></i></button>
-      <button type="button" data-tab="music" title="Musique (Ctrl+3)"><i data-icon="music"></i></button>
-      <button type="button" data-tab="notes" title="Notes (Ctrl+4)"><i data-icon="note"></i></button>
-      <button type="button" data-tab="timer" title="Minuteur (Ctrl+5)"><i data-icon="timer"></i><span class="dot" id="timerDot" hidden></span></button>
-      <button type="button" data-tab="settings" title="Réglages (Ctrl+6)"><i data-icon="sliders"></i></button>
+      <button type="button" data-tab="today" title="Aujourd'hui (Ctrl+1)"><i data-icon="sun"></i><span class="dot" id="todayDot" hidden></span></button>
+      <button type="button" data-tab="notes" title="Notes (Ctrl+5)"><i data-icon="note"></i></button>
+      <button type="button" data-tab="settings" title="Réglages (Ctrl+7)"><i data-icon="sliders"></i></button>
     </nav>
     <button type="button" class="icon-btn pin stagger" id="pinBtn" title="Garder le dock affiché" style="--d:170ms"><i data-icon="pin"></i></button>
   </header>
 
   <main class="panel" id="panel">
+    <!-- Aujourd'hui : vue d'ensemble (js/features/today.js) -->
+    <section class="view" data-view="today">
+      <div class="view-head">
+        <div><h2>Aujourd'hui</h2><p id="todaySummary"></p></div>
+      </div>
+      <div class="scroll"><div class="today-grid" id="todayGrid"></div></div>
+    </section>
+
     <!-- Rappels -->
     <section class="view" data-view="reminders">
       <div class="view-head">
+        <button type="button" class="icon-btn back" data-back title="Retour à Aujourd'hui"><i data-icon="chevron"></i></button>
         <div><h2>Rappels</h2><p id="remSummary"></p></div>
       </div>
       <form class="glass rem-composer" id="remForm" autocomplete="off">
@@ -125,6 +132,7 @@
     <!-- To-do -->
     <section class="view" data-view="todo">
       <div class="view-head">
+        <button type="button" class="icon-btn back" data-back title="Retour à Aujourd'hui"><i data-icon="chevron"></i></button>
         <div><h2>To-do</h2><p id="todoSummary"></p></div>
         <div class="todo-progress" id="todoProgress" title="Tâches faites"><span></span></div>
       </div>
@@ -157,6 +165,7 @@
     <section class="view music-view" data-view="music" id="musicView">
       <div class="music-bg" id="musicBg" aria-hidden="true"></div>
       <div class="view-head">
+        <button type="button" class="icon-btn back" data-back title="Retour à Aujourd'hui"><i data-icon="chevron"></i></button>
         <div><h2>Musique</h2><p id="musicSource">En attente de musique</p></div>
         <div class="head-actions"><button type="button" class="ghost" id="lyricsBtn"><i data-icon="lyrics"></i>Paroles</button></div>
       </div>
@@ -203,6 +212,7 @@
     <!-- Minuteur : temps limité (compte à rebours) ou illimité (chronomètre) -->
     <section class="view" data-view="timer" id="timerView">
       <div class="view-head">
+        <button type="button" class="icon-btn back" data-back title="Retour à Aujourd'hui"><i data-icon="chevron"></i></button>
         <div><h2>Minuteur</h2><p id="timerSummary"></p></div>
         <div class="head-actions tm-head">
           <div class="seg tm-modes" id="timerModes" style="--n:2">

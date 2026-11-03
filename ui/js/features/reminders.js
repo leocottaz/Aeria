@@ -322,5 +322,5 @@ const hasPendingReminders = () => alertQueue.some((a) => !a.onDone) || reminders
 
 export {
   reminders, REPEAT_NAMES, upcomingReminders, saveReminders, addReminder, fireReminder,
-  renderReminders, setupReminders, hasPendingReminders, showAlert, dismissAlert,
+  completeReminder, snoozeReminder, renderReminders, setupReminders, hasPendingReminders, showAlert, dismissAlert,
 };
