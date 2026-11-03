@@ -64,6 +64,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: transparent;
+  touch-action: pan-x pan-y; /* pas de pincement pour zoomer */
 }
 
 body {

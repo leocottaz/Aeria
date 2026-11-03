@@ -171,8 +171,12 @@ function onWheel({ x, y, dy, debug }) {
 function setupGlobal() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { send('hide'); return; }
+    if (e.ctrlKey && !e.altKey && /^[-+=0_]$/.test(e.key)) e.preventDefault(); // pas de zoom au clavier
     if (e.ctrlKey && !e.altKey && /^[1-7]$/.test(e.key)) { e.preventDefault(); openTab(SHORTCUTS[+e.key - 1]); }
   });
+  // Pas de zoom : Ctrl + molette, pincement (Safari/WebKit : gesture*). Le natif Windows le coupe déjà (IsZoomControlEnabled).
+  document.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  for (const g of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(g, (e) => e.preventDefault());
   // reflet spéculaire qui suit la souris sur les surfaces de verre
   document.addEventListener('pointermove', (e) => {
     const g = e.target.closest?.('.glass');
