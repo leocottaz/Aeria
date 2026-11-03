@@ -13,6 +13,7 @@
 #include "features/pc.h"
 #include "features/reminders.h"
 #include "features/updater.h"
+#include "features/voice.h"
 #include "linux/host.h"
 
 #include <glib.h>
@@ -90,6 +91,8 @@ void HandleMessage(const std::string& msg) {
         g_printerr("[page] %s\n", arg.c_str());
     } else if (cmd == "quit") {
         host::Quit();
+    } else if (cmd == "voice") { // status | download | listen
+        voice::Command(arg);
     } else if (cmd == "update") {
         updater::Install(arg);
     } else if (cmd == "openurl") {

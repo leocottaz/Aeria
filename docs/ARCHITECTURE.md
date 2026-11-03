@@ -59,6 +59,7 @@ Chaque module expose une petite interface dans son `.h` (un `namespace` : `dock:
 | `features/media.*` | Lecteur : thread qui interroge les contrôles multimédias de Windows (GlobalSystemMediaTransportControls) toutes les 400 ms, choisit la session (Deezer, ou toutes les sources), lit titre/pochette/position et exécute lecture/pause/suivant/précédent/position. Interfaces WinRT déclarées à la main (voir l'avertissement en tête de fichier). |
 | `features/pc.*` | Actions sur le PC : recherche de fichiers (index Windows Search via OLE DB, dossier de l'utilisateur hors AppData, mots nettoyés), ouverture d'un résultat (seulement un chemin déjà renvoyé ; exécutables et scripts → dossier sélectionné), routines (thread : ouvrir, volume Core Audio, musique, attendre), fenêtre « Ouvrir ». |
 | `features/updater.*` | Mise à jour (voir [Mises à jour](#mises-à-jour)) : `updater_common.cpp` (version compilée, validation du tag, lecture de `SHA256SUMS`), `updater.cpp` (Windows : téléchargement WinHTTP, SHA-256 CNG, lancement de `Setup.exe`). |
+| `features/voice.*` | Commande vocale « Aeria » (voir [Voix](#voix)) : `voice.cpp` (partagé : découpage du micro en phrases, whisper.cpp, détection du mot), `voice_win.cpp` (micro waveIn, téléchargement du modèle WinHTTP + SHA-256 CNG), `linux/voice_linux.cpp` (micro `parec`/`arecord`, libcurl). |
 | `common/util.h` · `util.cpp` · `util_common.cpp` | JSON, découpage, base64 (`util_common.cpp`, commun) ; UTF-8/UTF-16 et dossiers Windows (`util.cpp`). |
 
 Les `.h` partagés (`dock.h`, `bridge.h`, `tray.h`, `pc.h`, `util.h`) gardent ce qui touche à Windows derrière `#ifdef _WIN32`.
@@ -85,6 +86,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `js/features/music.js` | Mini-lecteur de la barre et onglet Musique : position interpolée, barre de progression, couleur de la pochette, paroles LRCLIB avec lrcmux en secours (synchronisées au format LRC, ou texte simple), ligne en cours pour le mini-dock (`updateMini`). |
 | `js/features/files.js` | Recherche de fichiers pour Claude : résultats rangés par recherche (cartes cliquables), ouverture par numéro dans la dernière recherche, contexte du mode Pro. |
 | `js/features/updater.js` | Mises à jour : interroge l'API GitHub (`releases/latest`) au démarrage puis toutes les 6 h, compare les versions, affiche la bannière (`#updateBanner`, visible panneau ouvert) et la carte des Réglages → Système ; envoie `update` au natif au clic. |
+| `js/features/voice.js` | Voix : carte « Voix » des Réglages (état, téléchargement du modèle), champ « Demander » éclairé pendant l'écoute, envoie à Aeria la phrase reçue (`heard`). |
 | `js/features/routines.js` | Routines : données, éditeur des Réglages, lancement (`routine` vers le natif), recherche par nom pour Claude. |
 | `js/chat/connection.js` | Section « Connexion » des Réglages : statut de Claude Code, clé API, clés gratuites. |
 | `js/chat/chat.js` | Conversation : état (`convo`, `turn`), envoi, évènements de streaming, rendu. |
@@ -124,6 +126,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `cancel` | id | Annule une requête `http` ou `cc`. |
 | `openurl` | URL http(s) | Ouvre le navigateur. |
 | `update` | tag `v1.2.3` | Télécharge, vérifie et lance l'installateur de cette version → messages `update`. Le natif refuse tout ce qui n'est pas `vN.N.N`. |
+| `voice` | `status` · `download` · `listen` | Voix : renvoie l'état, télécharge le modèle (~60 Mo, SHA-256 vérifié), ou écoute la prochaine phrase sans attendre « Aeria ». L'interrupteur passe par `config` (`voiceWake=1`). |
 | `search` | id, mots, extension, du, au | Recherche de fichiers → `reply` avec `results` (`path`, `name`, `modified`, `size`). |
 | `openfound` | chemin | Ouvre un fichier déjà renvoyé par `search` (sinon rien). |
 | `routine` | lignes `type\tvaleur` (`open`, `volume`, `mute`, `music`, `wait`, `lock`) | Exécute une routine dans un thread natif. |
@@ -137,6 +140,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | --- | --- | --- |
 | `init` | `hasKey`, `keyHint`, `autostart`, `lowMemory` (Windows), `freeKeys`, `version`, `canUpdate` | Réponse à `ready`. Sans `lowMemory`, la page garde son réglage. `version` : numéro de l'exécutable (`0.0.0` = build de développement). `canUpdate` : copie installée par `Setup.exe`. |
 | `update` | `state` (`downloading`, `verifying`, `installing`, `restarting`, `error`), `pct`, `msg` | Avancement d'une mise à jour. Sur `restarting`, la page envoie `quit` : l'installateur relance le dock. |
+| `voice` | `state` (`off`, `nomodel`, `downloading`, `loading`, `idle`, `awake`, `working`, `error`, `heard`), `pct`, `msg`, `text` | État de l'écoute. `heard` : `text` est la phrase à envoyer à Aeria (le natif a déjà ouvert le dock). |
 | `freekey` | `service`, `ok`, `freeKeys` | Résultat de `freekey` / `delfreekey`. |
 | `state` | `s`, `delay`, `pinned` | Nouvel état du dock. |
 | `key` | `ok`, `hasKey`, `keyHint` | Résultat de `key`/`delkey`. |
@@ -261,3 +265,12 @@ git tag v0.1.0 && git push origin v0.1.0
 - **Linux, interface seule** : comme sous Windows (serveur local, mode aperçu). **Linux, dans l'appli** : lancer `Aeria` depuis le dossier de build ; sous WSL, WSLg fournit l'affichage (X11), mais ignore les positions de fenêtre demandées et donne le focus à l'ouverture. Pour suivre la fenêtre sans outil graphique, un petit programme Xlib qui interroge `XQueryTree` suffit.
 - **Plantage en Release seulement** : compiler avec le preset `relwithdebinfo` et lancer sous `gdb` (paquet `mingw-w64-x86_64-gdb` de MSYS2) pour avoir la pile d'appels.
 - **Mode Pro sans consommer de quota** : un faux `claude.exe` placé plus tôt dans le `PATH` (ni `%USERPROFILE%\.local\bin` ni winget ne doivent contenir le vrai) reçoit les mêmes arguments.
+
+## Voix
+Réglage « Réveiller Aeria à la voix » (`voiceWake`, désactivé par défaut, transmis par `config`). Tout se passe dans le natif, hors ligne :
+1. **Micro** (`platform::StartCapture`) : 16 kHz mono, lu en continu par un thread dédié. Rien n'est enregistré sur disque.
+2. **Phrases** (`Segmenter`, `voice.cpp`) : détecteur d'énergie à seuil adaptatif (plancher de bruit mesuré). Une phrase commence après 80 ms de voix, finit après 0,7 s de silence (1,1 s pendant une commande), 12 s au plus.
+3. **Transcription** : whisper.cpp (`third_party/whisper.cpp`, CPU, AVX2) avec `ggml-base-q5_1.bin` (~190 Mo, téléchargé à l'activation dans `%APPDATA%\Aeria\models` / `~/.local/share/Aeria/models`, SHA-256 épinglé dans `voice.cpp`). Le CPU ne travaille que pendant les phrases.
+4. **Mot d'éveil** (`FindWakeWord`) : « Aeria » à une lettre près (« Aria », « Éria »…) ou coupé en deux petits mots, dans les 3 premiers mots seulement. Le reste de la phrase est la commande ; sinon l'écoute reste ouverte 8 s (`awake`).
+5. **Ouverture** : `dock::OpenPanelAsync` (message `WM_APP_OPEN` sous Windows, `g_idle_add` sous Linux), puis `{"t":"voice","state":"heard"}` : la page envoie le texte comme une question tapée.
+Banc d'essai : `tools/test/voice/run.ps1` (faux micro, phrases dites par la voix de Windows).

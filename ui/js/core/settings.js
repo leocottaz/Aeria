@@ -19,11 +19,12 @@ const DEFAULTS = {
   freeService: 'gemini', freeModel: '', freeFallback: false, // modèle gratuit ('' = automatique)
   musicSource: 'deezer', musicReveal: true, lyricsOpen: true, miniLyrics: true, musicTint: true,
   timerPill: false, // temps du minuteur dans le mini-dock
+  voiceWake: false, // dire « Aeria » ouvre le dock (micro écouté hors ligne par le natif)
   model: 'auto', effort: 'low', customInstr: '', lastTab: 'claude', settingsPage: 'aeria',
   updateCheck: true, updateSkipped: '', // mises à jour : vérification automatique, version ignorée (« v1.2.3 »)
 };
 const NUMERIC = new Set(['mode', 'revealDelay', 'hideDelay', 'width', 'panelH', 'flare']);
-const NATIVE_KEYS = new Set(['mode', 'revealDelay', 'hideDelay', 'width', 'panelH', 'theme', 'sound', 'autostart', 'lyricsOpen', 'miniLyrics', 'musicReveal', 'fullscreenReveal']);
+const NATIVE_KEYS = new Set(['mode', 'revealDelay', 'hideDelay', 'width', 'panelH', 'theme', 'sound', 'autostart', 'lyricsOpen', 'miniLyrics', 'musicReveal', 'fullscreenReveal', 'voiceWake']);
 const MODEL_NAMES = { 'claude-opus-5-5': 'Opus 5.5', 'claude-sonnet-5-5': 'Sonnet 5.5', 'claude-haiku-5-5': 'Haiku 5.5' };
 // « Auto » : le modèle suit le réglage Qualité.
 const AUTO_MODELS = { low: 'claude-haiku-5-5', medium: 'claude-sonnet-5-5', high: 'claude-opus-5-5' };
@@ -42,7 +43,7 @@ function sendConfig() {
     `mode=${settings.mode}`, `revealDelay=${settings.revealDelay}`, `hideDelay=${settings.hideDelay}`,
     `width=${settings.width}`, `panelH=${settings.panelH}`, `theme=${settings.theme}`,
     `sound=${settings.sound ? 1 : 0}`, `autostart=${settings.autostart ? 1 : 0}`,
-    `fullscreenReveal=${settings.fullscreenReveal ? 1 : 0}`,
+    `fullscreenReveal=${settings.fullscreenReveal ? 1 : 0}`, `voiceWake=${settings.voiceWake ? 1 : 0}`,
     // Le natif garde la page éveillée pendant une lecture : elle seule demande le mini-dock et la carte musique.
     `miniLyrics=${(settings.lyricsOpen && settings.miniLyrics) || settings.musicReveal ? 1 : 0}`,
   ].join('\n'));

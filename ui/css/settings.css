@@ -180,3 +180,8 @@ input[type=range]:active::-webkit-slider-thumb { transform: scale(1.25); }
 .swatches button.on { box-shadow: 0 0 0 2px var(--glass-a), 0 0 0 4px var(--a), 0 4px 14px -2px var(--a); }
 html.linux #flareField { display: none; } /* Linux : pas d'évasement (voir --flare-pad) */
 html.linux #fullscreenRevealRow { display: none; } /* Linux : pas de détection du plein écran */
+
+/* Carte « Voix » : avancement du téléchargement du modèle. */
+.voice-bar { display: block; height: 4px; border-radius: 2px; background: var(--field); overflow: hidden; }
+.voice-bar > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .3s var(--smooth); }
+#voiceStatus.error { color: #ff7a7a; }

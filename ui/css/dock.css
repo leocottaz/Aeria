@@ -456,3 +456,9 @@ kbd {
 /* Languette et progression : verre très bas, coins bas plus petits (le trait de progression ne dépasse pas). */
 body.st-progress:not(.preview) .ambient,
 body.st-peek:not(.preview) .ambient { --r: 4px; }
+
+/* Commande vocale : l'assistante écoute. Lueur fixe (pas d'animation continue : coût CPU en Économie de mémoire). */
+.ask.listening {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 24px -6px var(--accent);
+}

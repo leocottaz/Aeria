@@ -14,6 +14,7 @@ namespace dock {
 #ifdef _WIN32
 constexpr wchar_t kClassName[] = L"AeriaDock";
 constexpr UINT WM_APP_SUMMON = WM_APP + 3; // envoyé par une 2e instance : ouvrir le panneau
+constexpr UINT WM_APP_OPEN = WM_APP + 5;   // OpenPanelAsync : ouvrir le panneau (sans le refermer s'il l'est déjà)
 #endif
 
 struct Config {
@@ -48,6 +49,7 @@ void ApplyConfig(const std::string& payload);
 void OnPageReady();          // envoie l'état courant et joue l'intro au premier lancement
 void NotifyState();          // {"t":"state",…} vers la page
 void OpenPanel();            // ouvre et active le panneau
+void OpenPanelAsync();       // idem, depuis n'importe quel thread (commande vocale)
 void ShowBar();              // replie le panneau sur la barre
 void HideByUser();           // Échap, raccourci… : pas de réapparition tant que la souris reste en haut
 void SetPinned(bool pinned); // garder affiché

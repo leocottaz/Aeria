@@ -22,11 +22,14 @@ add_executable(Aeria
         src/linux/pc_linux.cpp              # fichiers, routines, volume
         src/features/reminders.cpp          # échéances des rappels et du minuteur (partagé avec Windows)
         src/features/updater_common.cpp     # version et vérification des mises à jour (partagé avec Windows)
+        src/features/voice.cpp              # commande vocale « Aeria » (partagé avec Windows)
+        src/linux/voice_linux.cpp           # micro (parec / arecord) et téléchargement du modèle
         src/linux/updater_linux.cpp         # pas d'installation automatique sous Linux
         src/common/util_common.cpp)
 target_include_directories(Aeria PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(Aeria PRIVATE AERIA_VERSION_STR="${AERIA_VERSION_NUM}")
-target_link_libraries(Aeria PRIVATE PkgConfig::GTK3 PkgConfig::WEBKIT PkgConfig::CURL PkgConfig::X11 Threads::Threads)
+include(cmake/whisper.cmake)
+target_link_libraries(Aeria PRIVATE whisper PkgConfig::GTK3 PkgConfig::WEBKIT PkgConfig::CURL PkgConfig::X11 Threads::Threads)
 
 # L'interface se trouve à côté de l'exécutable.
 add_custom_target(aeria_assets ALL
@@ -72,7 +75,7 @@ if (AERIA_DEB_LAYOUT)
     set(CPACK_PACKAGE_CONTACT "Aeria")
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Dock en verre : rappels, to-do, minuteur, notes, musique et Claude")
     set(CPACK_DEBIAN_PACKAGE_SECTION utils)
-    set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "xdg-utils, wireplumber | pulseaudio-utils")
+    set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "xdg-utils, wireplumber | pulseaudio-utils, pulseaudio-utils | alsa-utils")
     set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
     # Écrite explicitement : sans dpkg (Arch, Fedora…), CPack se rabattrait sur i386.
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")

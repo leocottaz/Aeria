@@ -10,6 +10,7 @@
 #include "common/util.h"
 #include "features/media.h"
 #include "features/reminders.h"
+#include "features/voice.h"
 #include "linux/host.h"
 #include "web/bridge.h"
 
@@ -550,6 +551,7 @@ const Config& Cfg() { return g_cfg; }
 void ApplyConfig(const std::string& payload) {
     Config c = g_cfg;
     bool autostartOn = autostart::Enabled(), wantAutostart = autostartOn;
+    int wantVoice = -1;
     for (const auto& line : util::Split(payload, '\n')) {
         auto kv = util::Split(line, '=', 2);
         if (kv.size() != 2) continue;
@@ -564,8 +566,10 @@ void ApplyConfig(const std::string& payload) {
         else if (k == "sound") c.sound = v == "1";
         else if (k == "autostart") wantAutostart = v == "1";
         else if (k == "miniLyrics") c.miniLyrics = v == "1";
+        else if (k == "voiceWake") wantVoice = v == "1";
     }
     bool geometryChanged = c.mode != g_cfg.mode || c.width != g_cfg.width || c.panelH != g_cfg.panelH;
+    if (wantVoice >= 0) voice::Apply(wantVoice == 1);
     bool widthChanged = c.width != g_cfg.width;
     g_cfg = c;
     if (wantAutostart != autostartOn) autostart::Set(wantAutostart);
@@ -594,6 +598,13 @@ void OpenPanel() {
     SetState(State::Panel);
     HoldUntilHovered(8000);
     Activate();
+}
+
+void OpenPanelAsync() {
+    g_idle_add(+[](gpointer) -> gboolean {
+        OpenPanel();
+        return G_SOURCE_REMOVE;
+    }, nullptr);
 }
 
 void ShowBar() { SetState(State::Bar); }

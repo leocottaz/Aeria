@@ -23,3 +23,9 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## whisper.cpp et ggml (commande vocale)
+
+Le code de [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (v1.9.5, dossier `third_party/whisper.cpp`, allégé : sans exemples, tests ni backends GPU) est sous licence MIT, Copyright (c) 2023-2026 The ggml authors. Le texte complet est dans `third_party/whisper.cpp/LICENSE`.
+
+Le modèle `ggml-base-q5_1.bin` (non inclus dans le dépôt : l'application le télécharge depuis [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp)) est une conversion du modèle Whisper « base » d'OpenAI, sous licence MIT, Copyright (c) 2022 OpenAI.

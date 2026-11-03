@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(Aeria CXX)
+project(Aeria C CXX)
 
 set(AERIA_VERSION "dev" CACHE STRING "Version affichée dans le nom du paquet (ex. v0.1.0)")
 set(CMAKE_CXX_STANDARD 20)
@@ -45,6 +45,8 @@ add_executable(Aeria WIN32
         src/features/pc.cpp             # recherche de fichiers, routines, volume
         src/features/updater.cpp        # mise à jour : télécharge, vérifie et lance Setup.exe
         src/features/updater_common.cpp # version, tag, SHA256SUMS (partagé avec Linux)
+        src/features/voice.cpp          # commande vocale « Aeria » (partagé avec Linux)
+        src/features/voice_win.cpp      # micro (waveIn) et téléchargement du modèle
 
         # common/ : utilitaires partagés
         src/common/util.cpp
@@ -54,7 +56,8 @@ set_source_files_properties(src/app/aeria.rc PROPERTIES OBJECT_DEPENDS ${CMAKE_S
 target_include_directories(Aeria PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/webview2/include)
 target_compile_definitions(Aeria PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00
         AERIA_VERSION_STR="${AERIA_VERSION_NUM}")
-target_link_libraries(Aeria PRIVATE bcrypt dwmapi winhttp crypt32 shell32 ole32 oleaut32 user32 gdi32 advapi32 shcore runtimeobject comdlg32 uuid)
+include(cmake/whisper.cmake)
+target_link_libraries(Aeria PRIVATE whisper winmm bcrypt dwmapi winhttp crypt32 shell32 ole32 oleaut32 user32 gdi32 advapi32 shcore runtimeobject comdlg32 uuid)
 
 if (MINGW)
     target_compile_options(Aeria PRIVATE -municode -Wno-unknown-pragmas)

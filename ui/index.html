@@ -408,6 +408,13 @@
               <div class="toggle-row">Ouvrir / fermer le dock<span><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>Espace</kbd></span></div>
             </div>
             <div class="card glass">
+              <h3>Voix</h3>
+              <label class="toggle-row"><span>Réveiller Aeria à la voix <span class="hint">dis « Aeria » : le dock s’ouvre et la phrase suivante lui est envoyée</span></span><span class="toggle"><input type="checkbox" data-setting="voiceWake"><span></span></span></label>
+              <p class="hint card-hint">Le micro est écouté en continu, mais tout reste sur ce PC : le son n’est ni enregistré ni envoyé, seules les phrases sont transcrites en mémoire par un modèle local.</p>
+              <div class="toggle-row"><span class="hint" id="voiceStatus">Désactivé.</span><button type="button" class="ghost" id="voiceDownload" hidden>Télécharger le modèle</button></div>
+              <span class="voice-bar" id="voiceBar" hidden><span id="voiceFill"></span></span>
+            </div>
+            <div class="card glass">
               <h3>Repli</h3>
               <div class="field">
                 <label>Délai avant de se replier <output data-for="hideDelay"></output></label>

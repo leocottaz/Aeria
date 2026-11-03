@@ -15,6 +15,7 @@ import { setupTimer, renderTimer, finishTimer, syncTimer } from './features/time
 import { renderChat, focusComposer, setupChat } from './chat/chat.js';
 import { onMedia, setupMusic, connectMusic, previewLyrics, fetchLyrics, guessTrack } from './features/music.js';
 import { setupUpdater, onUpdateInit, onUpdateMessage, showChangelog } from './features/updater.js';
+import { onVoice, setupVoice, syncVoice } from './features/voice.js';
 
 function onNative(m) {
   switch (m.t) {
@@ -61,6 +62,7 @@ function onNative(m) {
     case 'timerdone': finishTimer(); break;
     case 'media': onMedia(m); break;
     case 'update': onUpdateMessage(m); break;
+    case 'voice': onVoice(m); break;
     case 'reply': onReply(m); break;
     case 'hotkey': switchTab('claude'); focusComposer(); break;
     case 'show': switchTab(m.tab); if (m.tab === 'claude') focusComposer(); break;
@@ -84,6 +86,7 @@ function init() {
   setupMusic();
   setupGlobal();
   setupUpdater();
+  setupVoice();
   renderSettings();
   renderKey();
   renderCc();
@@ -105,8 +108,10 @@ function init() {
     bridge.addEventListener('message', (e) => onNative(e.data));
     send('ready');
     sendConfig();
+    syncVoice();
     // Le natif recrée la vue avec les nouvelles options : on laisse l'interrupteur finir.
     onSettingChange((key, value) => {
+      if (key === 'voiceWake') setTimeout(syncVoice, 50); // le natif a reçu la config : il annonce son état
       const linux = document.documentElement.classList.contains('linux'); // là-bas, rien à recharger
       if (key === 'lowMemory' && !linux) { toast('Rechargement du dock…'); setTimeout(() => send('lowmem', value ? '1' : '0'), 450); }
     });

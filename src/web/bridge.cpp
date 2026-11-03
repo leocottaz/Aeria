@@ -11,6 +11,7 @@
 #include "features/pc.h"
 #include "features/reminders.h"
 #include "features/updater.h"
+#include "features/voice.h"
 #include "web/webview_host.h"
 
 #include <shellapi.h>
@@ -140,6 +141,8 @@ void HandleMessage(const std::string& msg) {
         pc::SetVolume(std::atoi(arg.c_str()));
     } else if (cmd == "pickfile") {
         pc::PickFile(arg, g_window);
+    } else if (cmd == "voice") { // status | download | listen
+        voice::Command(arg);
     } else if (cmd == "update") { // tag « v1.2.3 » : télécharge, vérifie et lance l'installateur
         updater::Install(arg);
     } else if (cmd == "openurl") {
