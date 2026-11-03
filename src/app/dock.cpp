@@ -95,24 +95,6 @@ HMONITOR MouseMonitor() {
     return MonitorFromPoint(p, MONITOR_DEFAULTTONEAREST);
 }
 
-bool IsShellWindow(HWND w) {
-    wchar_t cls[64]{};
-    GetClassNameW(w, cls, 64);
-    return !wcscmp(cls, L"Progman") || !wcscmp(cls, L"WorkerW") || !wcscmp(cls, L"Shell_TrayWnd") ||
-           !wcscmp(cls, L"Shell_SecondaryTrayWnd");
-}
-
-// Écran où l'utilisateur travaille : celui de la fenêtre au premier plan. La souris peut très bien
-// être restée sur l'autre écran quand le dock sort au clavier (raccourci, voix) ou tout seul (rappel, musique).
-HMONITOR ActiveMonitor() {
-    HWND fg = GetForegroundWindow();
-    if (fg == g_hwnd || (fg && GetWindow(fg, GW_OWNER) == g_hwnd)) return Monitor();
-    if (fg && IsWindowVisible(fg) && !IsIconic(fg) && !IsShellWindow(fg)) { // le bureau et la barre des tâches couvrent plusieurs écrans
-        if (HMONITOR m = MonitorFromWindow(fg, MONITOR_DEFAULTTONULL)) return m;
-    }
-    return MouseMonitor();
-}
-
 RECT MonitorRect() {
     MONITORINFO mi{sizeof mi};
     if (!GetMonitorInfoW(Monitor(), &mi)) { // écran débranché : retour à l'écran principal
@@ -217,7 +199,9 @@ void AnimStep() {
 bool ForegroundIsFullscreen() {
     HWND fg = GetForegroundWindow();
     if (!fg || fg == g_hwnd) return false;
-    if (IsShellWindow(fg)) return false;
+    wchar_t cls[64]{};
+    GetClassNameW(fg, cls, 64);
+    if (!wcscmp(cls, L"Progman") || !wcscmp(cls, L"WorkerW") || !wcscmp(cls, L"Shell_TrayWnd")) return false;
     RECT r, m = MonitorRect();
     GetWindowRect(fg, &r);
     return r.left <= m.left && r.top <= m.top && r.right >= m.right && r.bottom >= m.bottom;
@@ -240,7 +224,8 @@ void SetState(State s, bool force = false) {
     g_outsideSince = 0;
     if (s == State::Progress) g_progressStart = GetTickCount64();
     if (prev == State::Hidden && s != State::Hidden) {
-        PlaceWindow(TargetRect(State::Hidden)); // g_monitor est déjà le bon (Poll suit la souris, ou ActiveMonitor)
+        g_monitor = MouseMonitor(); // raccourci, icône, rappel : on sort là où est la souris
+        PlaceWindow(TargetRect(State::Hidden));
         ShowWindow(g_hwnd, SW_SHOWNOACTIVATE);
         webview::SetVisible(true); // sort la vue de veille
         media::Command("refresh"); // la page était suspendue : on lui renvoie l'état du lecteur
@@ -264,31 +249,15 @@ void HoldUntilHovered(ULONGLONG ms) {
     g_releaseHoldOnEnter = true;
 }
 
-// Change l'écran du dock. Visible (languette, mini-dock), il repart du bord du nouvel écran.
-void SwitchScreen(HMONITOR mon) {
-    g_monitor = mon;
-    if (g_state != State::Hidden) PlaceWindow(TargetRect(State::Hidden)); // la fenêtre est cachée : rien à déplacer
-}
-
-// Avant une sortie qui n'est pas due à la souris : le dock vient sur l'écran de travail.
-void GoToActiveScreen() {
-    if (IsResting(g_state)) SwitchScreen(ActiveMonitor());
-}
-
 // Rangé (masqué, languette, mini-dock, progression), le dock passe sur l'écran de la souris.
 void FollowMouse(POINT p) {
     if (g_state == State::Bar || g_state == State::Panel || g_state == State::Music || g_anim.active) return;
     HMONITOR mon = MonitorFromPoint(p, MONITOR_DEFAULTTONEAREST);
     if (mon == Monitor()) return;
-    SwitchScreen(mon);
-    if (g_state != State::Hidden) SetState(RestState(), true);
-}
-
-void OpenPanelAtMouse() {
-    if (IsResting(g_state)) SwitchScreen(MouseMonitor()); // icône : la barre des tâches est sur l'écran de la souris
-    SetState(State::Panel);
-    HoldUntilHovered(8000);
-    Activate();
+    g_monitor = mon;
+    if (g_state == State::Hidden) return; // la fenêtre est cachée : rien à déplacer
+    PlaceWindow(TargetRect(State::Hidden)); // la languette redescend sur le nouvel écran
+    SetState(RestState(), true);
 }
 
 bool g_wasFocused = false;
@@ -410,9 +379,9 @@ void ShowTrayMenu() {
     int cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_BOTTOMALIGN, p.x, p.y, 0, g_hwnd, nullptr);
     DestroyMenu(menu);
     switch (cmd) {
-        case 1: OpenPanelAtMouse(); bridge::PostToPage("{\"t\":\"show\",\"tab\":\"claude\"}"); break;
+        case 1: OpenPanel(); bridge::PostToPage("{\"t\":\"show\",\"tab\":\"claude\"}"); break;
         case 2: SetPinned(!g_pinned); if (g_pinned && g_state != State::Panel) SetState(State::Bar); break;
-        case 3: OpenPanelAtMouse(); bridge::PostToPage("{\"t\":\"show\",\"tab\":\"settings\"}"); break;
+        case 3: OpenPanel(); bridge::PostToPage("{\"t\":\"show\",\"tab\":\"settings\"}"); break;
         case 4: DestroyWindow(g_hwnd); break;
         default: break;
     }
@@ -440,7 +409,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
             webview::Restart();
             return 0;
         case tray::WM_APP_TRAY:
-            if (LOWORD(lp) == WM_LBUTTONUP) OpenPanelAtMouse();
+            if (LOWORD(lp) == WM_LBUTTONUP) OpenPanel();
             else if (LOWORD(lp) == WM_RBUTTONUP) ShowTrayMenu();
             return 0;
         case WM_APP_SUMMON:
@@ -567,7 +536,6 @@ void NotifyState() {
 }
 
 void OpenPanel() {
-    GoToActiveScreen();
     SetState(State::Panel);
     HoldUntilHovered(8000);
     Activate();
@@ -601,14 +569,12 @@ void SetMini(int widthDip) {
 }
 
 void RevealBriefly(int ms) {
-    GoToActiveScreen();
     if (ForegroundIsFullscreen()) return; // pas par-dessus un jeu ou une vidéo plein écran
     if (g_state != State::Bar && g_state != State::Panel) SetState(State::Bar);
     HoldUntilHovered(ms);
 }
 
 void RevealMusic(int ms, int widthDip) {
-    GoToActiveScreen();
     if (ForegroundIsFullscreen()) return;
     int w = widthDip > 0 ? std::clamp(widthDip, 240, 480) : 380;
     bool resized = w != g_musicW;
