@@ -25,7 +25,7 @@ bool CanSelfUpdate();
 // « v1.2.3 » uniquement (trois nombres) : rejette tout le reste, notamment les chemins et URL.
 bool IsValidTag(const std::string& tag);
 
-// Fichier attendu dans la release : « ShadowAssistant-v1.2.3-windows-x64-setup.exe » ; vide hors Windows.
+// Fichier attendu dans la release : « Aeria-v1.2.3-windows-x64-setup.exe » ; vide hors Windows.
 std::string AssetName(const std::string& tag);
 
 // Contenu d'un SHA256SUMS (« <sha256>  <nom> » par ligne) → empreinte du fichier en minuscules,

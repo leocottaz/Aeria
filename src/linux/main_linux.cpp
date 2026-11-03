@@ -1,8 +1,9 @@
-// Shadow Assistant — port Linux (GTK3 + WebKitGTK). La fenêtre du dock affiche l'interface ;
+// Aeria — port Linux (GTK3 + WebKitGTK). La fenêtre du dock affiche l'interface ;
 // les commandes de la page sont routées par bridge_linux.cpp. Modules déjà portés : clés API,
 // requêtes HTTPS (libcurl), Claude Code. Protocole : docs/ARCHITECTURE.md.
 
 #include "ai/api_key.h"
+#include "app/autostart.h"
 #include "app/dock.h"
 #include "common/util.h"
 #include "features/media.h"
@@ -36,7 +37,7 @@ void OnMessage(WebKitUserContentManager*, WebKitJavascriptResult* result, gpoint
     bridge::HandleMessage(msg); // routeur commun : src/linux/bridge_linux.cpp
 }
 
-// L'interface est servie sous shadow://app/… (comme https://shadow.local/ avec WebView2) : depuis
+// L'interface est servie sous aeria://app/… (comme https://aeria.local/ avec WebView2) : depuis
 // file://, WebKit refuse les modules JavaScript. Seuls les fichiers de ui/ sont accessibles.
 const char* MimeFor(const std::string& path) {
     static const struct { const char* ext; const char* mime; } kTypes[] = {
@@ -82,7 +83,7 @@ gboolean OnNavigate(WebKitWebView*, WebKitPolicyDecision* decision, WebKitPolicy
     auto* nav = WEBKIT_NAVIGATION_POLICY_DECISION(decision);
     WebKitURIRequest* req = webkit_navigation_action_get_request(webkit_navigation_policy_decision_get_navigation_action(nav));
     std::string uri = webkit_uri_request_get_uri(req);
-    if (uri.rfind("shadow://", 0) == 0 || uri == "about:blank") return FALSE;
+    if (uri.rfind("aeria://", 0) == 0 || uri == "about:blank") return FALSE;
     webkit_policy_decision_ignore(decision); // liens externes : navigateur, pas la vue du dock
     if (uri.rfind("http", 0) == 0) gtk_show_uri_on_window(GTK_WINDOW(g_window), uri.c_str(), GDK_CURRENT_TIME, nullptr);
     return TRUE;
@@ -94,7 +95,7 @@ void Activate(GtkApplication* app, gpointer) {
         return;
     }
     g_window = gtk_application_window_new(app);
-    gtk_window_set_title(GTK_WINDOW(g_window), "Shadow Assistant");
+    gtk_window_set_title(GTK_WINDOW(g_window), "Aeria");
     gtk_window_set_decorated(GTK_WINDOW(g_window), FALSE);
     gtk_window_set_skip_taskbar_hint(GTK_WINDOW(g_window), TRUE);
     gtk_window_set_skip_pager_hint(GTK_WINDOW(g_window), TRUE);
@@ -114,14 +115,14 @@ void Activate(GtkApplication* app, gpointer) {
                      nullptr);
 
     WebKitUserContentManager* ucm = webkit_user_content_manager_new();
-    g_signal_connect(ucm, "script-message-received::shadow", G_CALLBACK(OnMessage), nullptr);
-    webkit_user_content_manager_register_script_message_handler(ucm, "shadow");
+    g_signal_connect(ucm, "script-message-received::aeria", G_CALLBACK(OnMessage), nullptr);
+    webkit_user_content_manager_register_script_message_handler(ucm, "aeria");
 
     WebKitWebContext* context = webkit_web_context_new();
-    webkit_web_context_register_uri_scheme(context, "shadow", ServeUi, nullptr, nullptr);
+    webkit_web_context_register_uri_scheme(context, "aeria", ServeUi, nullptr, nullptr);
     WebKitSecurityManager* security = webkit_web_context_get_security_manager(context);
-    webkit_security_manager_register_uri_scheme_as_secure(security, "shadow");
-    webkit_security_manager_register_uri_scheme_as_cors_enabled(security, "shadow");
+    webkit_security_manager_register_uri_scheme_as_secure(security, "aeria");
+    webkit_security_manager_register_uri_scheme_as_cors_enabled(security, "aeria");
 
     g_view = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW, "web-context", context, "user-content-manager", ucm, nullptr));
     GdkRGBA clear{0, 0, 0, 0};
@@ -136,7 +137,7 @@ void Activate(GtkApplication* app, gpointer) {
     gtk_widget_show_all(layout);
     dock::Init(g_window, layout, g_view);
 
-    webkit_web_view_load_uri(g_view, "shadow://app/index.html");
+    webkit_web_view_load_uri(g_view, "aeria://app/index.html");
     // La fenêtre reste cachée : le dock l'affiche quand la page envoie « ready » (OnPageReady).
 }
 
@@ -182,7 +183,7 @@ int main(int argc, char** argv) {
     // sur le bord de l'écran, ni de capter un raccourci global.
     gdk_set_allowed_backends("x11,wayland");
     api_key::Load();
-    GtkApplication* app = gtk_application_new("io.github.shadowassistant", G_APPLICATION_DEFAULT_FLAGS); // instance unique via D-Bus
+    GtkApplication* app = gtk_application_new("io.github.aeria", G_APPLICATION_DEFAULT_FLAGS); // instance unique via D-Bus
     g_signal_connect(app, "activate", G_CALLBACK(Activate), nullptr);
     media::Start();
     int status = g_application_run(G_APPLICATION(app), argc, argv);

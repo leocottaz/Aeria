@@ -211,7 +211,7 @@ function updatePill() {
   if (running()) pillTimer = setTimeout(updatePill, (down ? remaining() % 1000 || 1000 : 1000 - elapsedNow() % 1000) + 10);
 }
 
-// --- commandes de Maya (chat/tools.js) : chacune renvoie une phrase pour le modèle
+// --- commandes de Aeria (chat/tools.js) : chacune renvoie une phrase pour le modèle
 
 function startCountdown(ms) {
   if (!(ms >= 1000) || ms > MAX) throw new Error('Durée invalide : entre 1 seconde et 24 heures.');

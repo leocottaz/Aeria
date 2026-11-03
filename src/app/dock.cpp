@@ -470,7 +470,7 @@ HWND Create(HINSTANCE instance) {
     RegisterClassExW(&wc);
 
     RECT r = TargetRect(State::Hidden);
-    g_hwnd = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_TOPMOST, kClassName, L"Shadow Assistant", WS_POPUP, r.left, r.top,
+    g_hwnd = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_TOPMOST, kClassName, L"Aeria", WS_POPUP, r.left, r.top,
                              r.right - r.left, r.bottom - r.top, nullptr, nullptr, instance, nullptr);
     ApplyBackdrop();
 

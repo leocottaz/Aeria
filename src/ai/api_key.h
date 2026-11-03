@@ -1,5 +1,5 @@
-// Clés API, chiffrées avec DPAPI (liées à la session Windows) dans %APPDATA%\ShadowAssistant :
-// Anthropic (apikey.bin) et celles des modèles gratuits, Groq et Gemini (<service>key.bin).
+// Clés API, chiffrées avec DPAPI (liées à la session Windows) dans %APPDATA%\Aeria :
+// Anthropic (apikey.bin) et celles des services compatibles OpenAI : Groq, Gemini, OpenAI (<service>key.bin).
 // Elles ne sont jamais envoyées à la page.
 #pragma once
 
@@ -7,7 +7,7 @@
 
 namespace api_key {
 
-// Service : "anthropic" (par défaut), "groq" ou "gemini". Tout autre nom est refusé.
+// Service : "anthropic" (par défaut), "groq", "gemini" ou "openai". Tout autre nom est refusé.
 bool IsKnown(const std::string& slot);
 
 void Load(); // toutes les clés

@@ -73,7 +73,7 @@ void Readd() {
     nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     nid.uCallbackMessage = WM_APP_TRAY;
     nid.hIcon = g_icon;
-    wcscpy_s(nid.szTip, L"Shadow Assistant — Ctrl+Alt+Espace");
+    wcscpy_s(nid.szTip, L"Aeria — Ctrl+Alt+Espace");
     Shell_NotifyIconW(NIM_ADD, &nid);
 }
 

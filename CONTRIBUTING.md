@@ -1,4 +1,4 @@
-# Contribuer à Shadow Assistant
+# Contribuer à Aeria
 
 Merci de ton aide ! Ce guide dit comment compiler, où ranger ton code et comment tester sans mauvaise surprise.
 Le projet est en français : commentaires, interface, messages de commit.
@@ -19,10 +19,10 @@ Autres presets : `debug`, `relwithdebinfo` (voir `CMakePresets.json`). Sous Linu
 
 ```bash
 cmake --preset linux-release
-cmake --build --preset linux-release     # ./build/linux-release/ShadowAssistant
+cmake --build --preset linux-release     # ./build/linux-release/Aeria
 ```
 
-Les installateurs (`installer/`) se construisent comme dans le README (section « Publier une version ») ; teste-les avec un dossier d'installation temporaire (`/DIR=…`) et **sans ta vraie valeur de démarrage automatique** : l'installateur écrit la clé `Run\ShadowAssistant`, la même que celle de l'application. L'`AppId` du `.iss` ne doit jamais changer.
+Les installateurs (`installer/`) se construisent comme dans le README (section « Publier une version ») ; teste-les avec un dossier d'installation temporaire (`/DIR=…`) et **sans ta vraie valeur de démarrage automatique** : l'installateur écrit la clé `Run\Aeria`, la même que celle de l'application. L'`AppId` du `.iss` ne doit jamais changer.
 
 Une modification de `src/` doit **compiler sur les deux plateformes** (la CI le vérifie). Un module partagé ne contient pas de code Windows hors de `#ifdef _WIN32` ; sinon, il a une version dans `src/linux/`.
 
@@ -75,7 +75,7 @@ Les recettes pas à pas (nouvelle commande native, nouveau message, nouveau rég
 - Modules ES natifs, **aucune dépendance externe ni étape de build**. Ne pas ajouter de npm, de bundler ou de CDN.
 - Une fonctionnalité exporte `setupX()` (évènements, appelée une fois) et `renderX()` (redessine).
 - Réagir à un réglage : `onSettingChange(fn)` plutôt qu'un import croisé (évite les dépendances circulaires).
-- Stockage : `store.get/set` (`core/util.js`), qui préfixe les clés par `shadow.`.
+- Stockage : `store.get/set` (`core/util.js`), qui préfixe les clés par `aeria.`.
 - CSS : variables de thème dans `base.css`, un fichier par zone. Pas de `filter: blur()` sur de grandes surfaces (coût GPU).
 - 2 espaces, guillemets simples.
 
@@ -95,14 +95,14 @@ Lance l'exe avec `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=
 Autres scripts dans `tools/dev/` : captures (`shot.ps1`), mémoire (`mem.ps1`, `mem-flags.ps1`), fluidité (`frames.ps1`, `gpu.ps1`).
 
 ### Mises à jour
-`powershell -File tools\test\updater\run.ps1` teste `src/features/updater.cpp` contre un serveur local et un faux `Setup.exe` (jamais GitHub, jamais ton installation). Ne définis **jamais** `SHADOW_UPDATE_BASE` ni `SHADOW_UPDATE_ALLOW_HTTP` dans un build livré : ils n'existent que pour ce banc d'essai. Le nom de l'installateur (`OutputBaseFilename` du `.iss`, `AssetName()`, `SHA256SUMS`) forme un contrat : change les trois ensemble.
+`powershell -File tools\test\updater\run.ps1` teste `src/features/updater.cpp` contre un serveur local et un faux `Setup.exe` (jamais GitHub, jamais ton installation). Ne définis **jamais** `AERIA_UPDATE_BASE` ni `AERIA_UPDATE_ALLOW_HTTP` dans un build livré : ils n'existent que pour ce banc d'essai. Le nom de l'installateur (`OutputBaseFilename` du `.iss`, `AssetName()`, `SHA256SUMS`) forme un contrat : change les trois ensemble.
 
 ### Règles de test
 - **Musique** : n'envoie aucune commande (pause, suivant, position) à ta vraie lecture. Utilise `tools/dev/fake-session.ps1`, qui crée une session Windows muette, et vérifie que c'est bien elle qui est suivie avant chaque commande.
 - **Paroles** : teste avec des lignes fictives (`window.__preview.previewLyrics([...])`). Ne mets jamais de vraies paroles dans le dépôt, une capture ou une issue.
 - **Mode Pro** : chaque message consomme le quota de l'abonnement. Compile `tools/fake-claude/fake.cpp` en `claude.exe` et place-le en tête du `PATH` ; attention, `%USERPROFILE%\.local\bin\claude.exe` (le vrai) passe avant.
 - **Clés** : ne commite jamais de clé API, même de test.
-- **Linux** : même règle pour la musique (aucune commande `media` à ton vrai lecteur MPRIS) et pour `~/.config/ShadowAssistant`. Teste la recherche de fichiers avec un faux `HOME` (`HOME=$(mktemp -d)`), et l'icône avec un bus privé (`dbus-run-session`) et un faux `StatusNotifierWatcher`, pas avec ta session.
+- **Linux** : même règle pour la musique (aucune commande `media` à ton vrai lecteur MPRIS) et pour `~/.config/Aeria`. Teste la recherche de fichiers avec un faux `HOME` (`HOME=$(mktemp -d)`), et l'icône avec un bus privé (`dbus-run-session`) et un faux `StatusNotifierWatcher`, pas avec ta session.
 
 ## 5. Pièges connus
 
@@ -111,7 +111,7 @@ Autres scripts dans `tools/dev/` : captures (`shot.ps1`), mémoire (`mem.ps1`, `
 - **`std::ifstream(std::wstring)`** ne compile pas sous MinGW : passer par `std::filesystem::path`.
 - **Dock caché = page en veille** : un `cdp.ps1` lancé à ce moment attend le réveil. Ouvre le dock avant.
 - **Taille de la barre** : `kBarH`/`kInset` (`src/app/dock.cpp` et `src/linux/dock_linux.cpp`) et `--bar-h`/`--inset` (`ui/css/base.css`) doivent rester égaux.
-- **Linux : jamais `file://` pour l'interface** : WebKit bloque les modules JS ; la page est servie en `shadow://app/…`. Ne nomme pas une fonction `Display()` dans un fichier qui inclut Xlib (masque le type `Display`).
+- **Linux : jamais `file://` pour l'interface** : WebKit bloque les modules JS ; la page est servie en `aeria://app/…`. Ne nomme pas une fonction `Display()` dans un fichier qui inclut Xlib (masque le type `Display`).
 - **Nouvel état du dock** : l'ajouter aussi à la liste `classList.remove('st-…')` de `setState` (`ui/js/dock/dock.js`).
 - **`[hidden]`** est écrasé par `display:flex` : la règle globale `[hidden]{display:none!important}` de `base.css` s'en charge, ne la retire pas.
 

@@ -13,7 +13,7 @@ namespace {
 std::filesystem::path DesktopFile() {
     const char* xdg = std::getenv("XDG_CONFIG_HOME");
     std::filesystem::path base = xdg && *xdg ? std::filesystem::path(xdg) : std::filesystem::path(util::HomeDir()) / ".config";
-    return base / "autostart" / "shadow-assistant.desktop";
+    return base / "autostart" / "aeria.desktop";
 }
 
 // Valeur de Exec : entre guillemets, avec les caractères spéciaux échappés (spécification Desktop Entry).
@@ -42,8 +42,8 @@ void Set(bool enabled) {
     }
     std::filesystem::create_directories(file.parent_path(), ec);
     std::ofstream f(file, std::ios::trunc);
-    f << "[Desktop Entry]\nType=Application\nName=Shadow Assistant\nComment=Dock en verre\n"
-      << "Exec=" << QuoteExec(util::ExeDir() + "/ShadowAssistant") << "\nTerminal=false\nX-GNOME-Autostart-enabled=true\n";
+    f << "[Desktop Entry]\nType=Application\nName=Aeria\nComment=Dock en verre\n"
+      << "Exec=" << QuoteExec(util::ExeDir() + "/Aeria") << "\nTerminal=false\nX-GNOME-Autostart-enabled=true\n";
 }
 
 } // namespace autostart

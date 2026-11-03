@@ -6,7 +6,7 @@
 int main(int argc, char** argv) {
     char path[MAX_PATH];
     GetTempPathA(MAX_PATH, path);
-    strcat(path, "shadow-fake-setup.log");
+    strcat(path, "aeria-fake-setup.log");
     FILE* f = fopen(path, "a");
     if (f) {
         fprintf(f, "LANCE:");

@@ -1,10 +1,10 @@
 // Pont avec l'hôte natif (src/web/bridge.cpp) : send() envoie "commande\nargument",
 // http garde les requêtes en cours (mode Clé API et Claude Code) jusqu'à "done"/"error".
 
-// Windows : WebView2 (chrome.webview). Linux : WebKitGTK, qui expose le gestionnaire « shadow » ;
+// Windows : WebView2 (chrome.webview). Linux : WebKitGTK, qui expose le gestionnaire « aeria » ;
 // le natif répond en appelant window.__fromNative(json).
 function linuxBridge() {
-  const handler = window.webkit?.messageHandlers?.shadow;
+  const handler = window.webkit?.messageHandlers?.aeria;
   if (!handler) return null;
   document.documentElement.classList.add('linux'); // pas d'acrylique : la page dessine son fond
   let listener = null;

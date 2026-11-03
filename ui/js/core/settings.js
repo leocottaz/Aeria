@@ -15,20 +15,27 @@ const DEFAULTS = {
   mode: 0, revealDelay: 550, hideDelay: 700, fullscreenReveal: false, width: 680, panelH: 540, flare: 18,
   theme: 'dark', accent: 'violet', reduceMotion: false, sound: true, autostart: false, lowMemory: true,
   backend: 'pro', ccModel: 'default',
-  freeService: 'gemini', freeModel: '', freeFallback: true, // modèle gratuit ('' = automatique)
+  category: 'claude', claudeMode: 'pro', // catégorie de connexion (Claude, ChatGPT, Gratuit) ; claudeMode = dernier mode Claude
+  freeService: 'gemini', freeModel: '', freeFallback: false, // modèle gratuit ('' = automatique)
   musicSource: 'deezer', musicReveal: true, lyricsOpen: true, miniLyrics: true, musicTint: true,
   timerPill: false, // temps du minuteur dans le mini-dock
-  model: 'claude-opus-5-5', effort: 'medium', customInstr: '', lastTab: 'claude', settingsPage: 'maya',
+  model: 'auto', effort: 'low', customInstr: '', lastTab: 'claude', settingsPage: 'aeria',
   updateCheck: true, updateSkipped: '', // mises à jour : vérification automatique, version ignorée (« v1.2.3 »)
 };
 const NUMERIC = new Set(['mode', 'revealDelay', 'hideDelay', 'width', 'panelH', 'flare']);
 const NATIVE_KEYS = new Set(['mode', 'revealDelay', 'hideDelay', 'width', 'panelH', 'theme', 'sound', 'autostart', 'lyricsOpen', 'miniLyrics', 'musicReveal', 'fullscreenReveal']);
 const MODEL_NAMES = { 'claude-opus-5-5': 'Opus 5.5', 'claude-sonnet-5-5': 'Sonnet 5.5', 'claude-haiku-5-5': 'Haiku 5.5' };
+// « Auto » : le modèle suit le réglage Qualité.
+const AUTO_MODELS = { low: 'claude-haiku-5-5', medium: 'claude-sonnet-5-5', high: 'claude-opus-5-5' };
+const apiModel = () => (settings.model === 'auto' ? AUTO_MODELS[settings.effort] || AUTO_MODELS.medium : settings.model);
 const CC_MODEL_NAMES = { default: 'modèle par défaut', opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku' };
 const EFFORT_NAMES = { low: 'rapide', medium: 'équilibrée', high: 'approfondie' };
-const FREE_NAMES = { gemini: 'Gemini', groq: 'Groq' };
+const FREE_NAMES = { gemini: 'Gemini', groq: 'Groq', openai: 'OpenAI' };
 
 let settings = { ...DEFAULTS, ...store.get('settings', {}) };
+// La catégorie se déduit du mode enregistré (réglages d'avant les catégories).
+settings.category = settings.backend === 'free' ? 'free' : settings.backend === 'chatgpt' ? 'chatgpt' : 'claude';
+if (settings.category === 'claude') settings.claudeMode = settings.backend;
 
 function sendConfig() {
   send('config', [
@@ -57,9 +64,11 @@ function applyAppearance() {
   const effort = `réflexion ${EFFORT_NAMES[settings.effort] || settings.effort}`;
   $('#chatModel').textContent = settings.backend === 'pro'
     ? `Abonnement Pro · ${CC_MODEL_NAMES[settings.ccModel] || settings.ccModel} · ${effort}`
+    : settings.backend === 'chatgpt'
+      ? `ChatGPT${settings.freeModel ? ` · ${settings.freeModel}` : ''}`
     : settings.backend === 'free'
       ? `Gratuit · ${FREE_NAMES[settings.freeService] || settings.freeService}${settings.freeModel ? ` · ${settings.freeModel}` : ''}`
-      : `API · ${MODEL_NAMES[settings.model] || settings.model} · ${effort}`;
+      : `API · ${MODEL_NAMES[apiModel()] || apiModel()} · ${effort}`;
 }
 
 function setSetting(key, value) {
@@ -120,9 +129,15 @@ function renderSettings() {
   $('#revealField').style.display = settings.mode === 0 ? '' : 'none';
   $('#proSection').hidden = settings.backend !== 'pro';
   $('#apiSection').hidden = settings.backend !== 'api';
-  $('#freeFallbackRow').hidden = settings.backend === 'free'; // le secours n'a de sens qu'avec Claude
-  $('#freeFields').hidden = settings.backend !== 'free' && !settings.freeFallback;
-  $('#effortField').hidden = settings.backend === 'free';
+  $('#proModelField').hidden = settings.backend !== 'pro';
+  $('#apiModelField').hidden = settings.backend !== 'api';
+  const claude = settings.category === 'claude';
+  $('#claudeModeField').hidden = !claude;
+  $('#freeFallbackRow').hidden = !claude; // le secours n'a de sens qu'avec Claude
+  $('#freeFields').hidden = claude && !settings.freeFallback;
+  $('#freeServiceField').hidden = settings.category === 'chatgpt';
+  $('#chatgptKeyLabel').hidden = settings.category !== 'chatgpt';
+  $('#effortField').hidden = !claude;
   if (document.activeElement !== $('#customInstr')) $('#customInstr').value = settings.customInstr;
 }
 
@@ -161,4 +176,4 @@ function setupSettings() {
   $('#quitBtn').addEventListener('click', () => send('quit'));
 }
 
-export { settings, setSetting, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange };
+export { settings, apiModel, setSetting, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange };

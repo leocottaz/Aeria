@@ -23,7 +23,7 @@ namespace tray {
 namespace {
 
 constexpr char kObjectPath[] = "/StatusNotifierItem";
-constexpr char kTooltip[] = "Shadow Assistant — Ctrl+Alt+Espace";
+constexpr char kTooltip[] = "Aeria — Ctrl+Alt+Espace";
 
 const char kXml[] = R"XML(<node>
   <interface name="org.kde.StatusNotifierItem">
@@ -150,8 +150,8 @@ void OnMethod(GDBusConnection*, const gchar*, const gchar*, const gchar*, const 
 GVariant* OnGetProperty(GDBusConnection*, const gchar*, const gchar*, const gchar*, const gchar* name, GError**, gpointer) {
     std::string n = name;
     if (n == "Category") return g_variant_new_string("ApplicationStatus");
-    if (n == "Id") return g_variant_new_string("shadow-assistant");
-    if (n == "Title") return g_variant_new_string("Shadow Assistant");
+    if (n == "Id") return g_variant_new_string("aeria");
+    if (n == "Title") return g_variant_new_string("Aeria");
     if (n == "Status") return g_variant_new_string("Active");
     if (n == "WindowId") return g_variant_new_int32(0);
     if (n == "IconName" || n == "OverlayIconName" || n == "AttentionIconName") return g_variant_new_string("");
@@ -211,7 +211,7 @@ void Notify(const std::string& title, const std::string& text, bool sound) {
     GVariantBuilder hints;
     g_variant_builder_init(&hints, G_VARIANT_TYPE("a{sv}"));
     if (sound) g_variant_builder_add(&hints, "{sv}", "sound-name", g_variant_new_string("message-new-instant"));
-    GVariant* params = g_variant_new("(susssasa{sv}i)", "Shadow Assistant", (guint32)0, "", title.c_str(), text.c_str(), nullptr,
+    GVariant* params = g_variant_new("(susssasa{sv}i)", "Aeria", (guint32)0, "", title.c_str(), text.c_str(), nullptr,
                                      &hints, (gint32)-1);
     g_dbus_connection_call(bus, "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
                            "org.freedesktop.Notifications", "Notify", params, nullptr, G_DBUS_CALL_FLAGS_NONE, 2000, nullptr,

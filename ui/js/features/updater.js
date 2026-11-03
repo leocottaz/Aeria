@@ -4,8 +4,8 @@ import { $, store, toast } from '../core/util.js';
 import { bridge, send } from '../core/bridge.js';
 import { settings, setSetting } from '../core/settings.js';
 
-const RELEASES_API = 'https://api.github.com/repos/leocottaz/ShadowAssistant/releases';
-const RELEASES ='https://github.com/leocottaz/ShadowAssistant/releases';
+const RELEASES_API = 'https://api.github.com/repos/leocottaz/Aeria/releases';
+const RELEASES ='https://github.com/leocottaz/Aeria/releases';
 const CHECK_EVERY = 6 * 3600 * 1000;
 
 // version : numéro de l'exécutable ; canUpdate : copie installée par Setup.exe (sinon on renvoie vers GitHub).
@@ -75,7 +75,7 @@ async function check({ manual = false } = {}) {
       // Une seule notification par version, même si le panneau reste fermé.
       if (store.get('updateNotified', '') !== r.tag_name && r.tag_name !== settings.updateSkipped) {
         store.set('updateNotified', r.tag_name);
-        send('notify', 'Mise à jour disponible', `Shadow Assistant ${version} est prête (tu as la ${U.version}).`);
+        send('notify', 'Mise à jour disponible', `Aeria ${version} est prête (tu as la ${U.version}).`);
       }
     } else if (manual) {
       setStatus('Tu as la dernière version.');
@@ -109,7 +109,7 @@ const STATE_TEXT = {
   downloading: 'Téléchargement…',
   verifying: 'Vérification du fichier…',
   installing: 'Installation…',
-  restarting: 'Redémarrage de Shadow Assistant…',
+  restarting: 'Redémarrage de l’application…',
 };
 
 // Messages {"t":"update"} du natif.

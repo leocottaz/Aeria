@@ -18,8 +18,8 @@
 #include <vector>
 
 // Dépôt officiel, et seulement lui. Les tests le remplacent par un serveur local (voir tools/dev).
-#ifndef SHADOW_UPDATE_BASE
-#define SHADOW_UPDATE_BASE "https://github.com/leocottaz/ShadowAssistant/releases/download/"
+#ifndef AERIA_UPDATE_BASE
+#define AERIA_UPDATE_BASE "https://github.com/leocottaz/Aeria/releases/download/"
 #endif
 
 namespace updater {
@@ -86,14 +86,14 @@ bool HttpGet(const std::string& url, uint64_t maxBytes, const std::function<bool
         return false;
     }
     bool secure = uc.nScheme == INTERNET_SCHEME_HTTPS;
-#ifndef SHADOW_UPDATE_ALLOW_HTTP
+#ifndef AERIA_UPDATE_ALLOW_HTTP
     if (!secure) {
         error = "Seul HTTPS est accepté.";
         return false;
     }
 #endif
 
-    HINTERNET session = WinHttpOpen((L"ShadowAssistant-updater/" + util::Widen(Version())).c_str(),
+    HINTERNET session = WinHttpOpen((L"Aeria-updater/" + util::Widen(Version())).c_str(),
                                     WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     HINTERNET connect = session ? WinHttpConnect(session, host, uc.nPort, 0) : nullptr;
     HINTERNET req = connect ? WinHttpOpenRequest(connect, L"GET", path, nullptr, WINHTTP_NO_REFERER,
@@ -162,7 +162,7 @@ bool HttpGet(const std::string& url, uint64_t maxBytes, const std::function<bool
 void Run(const std::string& tag) {
     namespace fs = std::filesystem;
     const std::string asset = AssetName(tag);
-    const std::string base = std::string(SHADOW_UPDATE_BASE) + tag + "/";
+    const std::string base = std::string(AERIA_UPDATE_BASE) + tag + "/";
     std::string error;
 
     // 1. L'empreinte attendue, dans le SHA256SUMS de la même release.
@@ -181,7 +181,7 @@ void Run(const std::string& tag) {
 
     // 2. L'installateur, dans un dossier temporaire dédié.
     std::error_code ec;
-    fs::path dir = fs::temp_directory_path(ec) / "ShadowAssistant-update";
+    fs::path dir = fs::temp_directory_path(ec) / "Aeria-update";
     fs::create_directories(dir, ec);
     fs::path file = dir / asset;
     fs::remove(file, ec);

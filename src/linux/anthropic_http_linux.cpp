@@ -35,6 +35,7 @@ struct FreeService {
 const FreeService kFree[] = {
     {"groq", "api.groq.com", "/openai/v1/"},
     {"gemini", "generativelanguage.googleapis.com", "/v1beta/openai/"},
+    {"openai", "api.openai.com", "/v1/"},
 };
 
 struct Transfer {
@@ -86,7 +87,7 @@ void Run(std::shared_ptr<Request> req, std::string host, std::string method, std
         };
         std::string url = "https://" + host + path;
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_USERAGENT, "ShadowAssistant/1.0");
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Aeria/1.0");
         curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method.c_str());
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, list);
         if (!body.empty()) {

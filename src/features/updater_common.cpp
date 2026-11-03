@@ -3,13 +3,13 @@
 
 #include <cctype>
 
-#ifndef SHADOW_VERSION_STR
-#define SHADOW_VERSION_STR "0.0.0"
+#ifndef AERIA_VERSION_STR
+#define AERIA_VERSION_STR "0.0.0"
 #endif
 
 namespace updater {
 
-const char* Version() { return SHADOW_VERSION_STR; }
+const char* Version() { return AERIA_VERSION_STR; }
 
 bool IsValidTag(const std::string& tag) {
     // v<n>.<n>.<n>, chaque nombre de 1 à 5 chiffres.
@@ -32,7 +32,7 @@ bool IsValidTag(const std::string& tag) {
 
 std::string AssetName(const std::string& tag) {
 #ifdef _WIN32
-    return IsValidTag(tag) ? "ShadowAssistant-" + tag + "-windows-x64-setup.exe" : std::string();
+    return IsValidTag(tag) ? "Aeria-" + tag + "-windows-x64-setup.exe" : std::string();
 #else
     (void)tag;
     return {};

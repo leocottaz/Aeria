@@ -23,7 +23,7 @@ let turn = null;      // tour en cours : { reqId, blocks, stop, startLen, userTe
 let chatNotice = null;
 
 // Secours gratuit possible : activé dans les réglages, clé du service enregistrée, et Claude choisi.
-const canFallback = () => settings.backend !== 'free' && settings.freeFallback && freeReady();
+const canFallback = () => settings.category === 'claude' && settings.freeFallback && freeReady();
 
 function sendChat(text) {
   text = text.trim();
@@ -31,7 +31,8 @@ function sendChat(text) {
   const backend = settings.backend;
   const pro = backend === 'pro';
   let fallback = ''; // raison du passage au modèle gratuit avant même d'essayer Claude
-  if (backend === 'free' && !freeReady()) { updateNoKey(); toast('Ajoute d’abord une clé gratuite'); return; }
+  const direct = backend === 'free' || backend === 'chatgpt'; // service compatible OpenAI choisi comme connexion
+  if (direct && !freeReady()) { updateNoKey(); toast('Ajoute d’abord une clé'); return; }
   if (bridge && pro && S.cc.checked && !S.cc.found) {
     if (!canFallback()) { updateNoKey(); toast('Installe d’abord Claude Code'); return; }
     fallback = 'Claude Code n’est pas installé';
@@ -51,7 +52,7 @@ function sendChat(text) {
   turn = { startLen, userText: text, loops: 0, blocks: [], via: fallback ? { reason: fallback } : null };
   renderChat();
   scrollChat(true);
-  if (fallback || backend === 'free') freeStep();
+  if (fallback || direct) freeStep();
   else if (pro) ccStep([ctx, remindersContext(), todosContext(), foundContext()].filter(Boolean).join('\n') + `\n\n${text}`);
   else streamStep();
 }
@@ -353,7 +354,7 @@ function setupChat() {
       navigator.clipboard?.writeText(text).then(() => toast('Copié'), () => toast('Copie impossible'));
     }
   });
-  $('[data-goto="settings"]').addEventListener('click', () => { switchTab('settings'); openSettingsPage('maya'); });
+  $('[data-goto="settings"]').addEventListener('click', () => { switchTab('settings'); openSettingsPage('aeria'); });
 }
 
 export {

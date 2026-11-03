@@ -35,7 +35,7 @@ function onNative(m) {
       onUpdateInit(m);
       if (!store.get('welcomed', false)) {
         store.set('welcomed', true);
-        setTimeout(() => { switchTab('settings'); openSettingsPage('maya'); send('open'); setTimeout(() => $('#keyInput').focus(), 400); }, 1400);
+        setTimeout(() => { switchTab('settings'); openSettingsPage('aeria'); send('open'); setTimeout(() => $('#keyInput').focus(), 400); }, 1400);
       }
       break;
     case 'state': setState(m.s, m); break;

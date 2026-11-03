@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=Shadow Assistant
+Name=Aeria
 Comment=Dock en verre : rappels, to-do, minuteur, notes, musique et Claude
-Exec=shadow-assistant
-Icon=shadow-assistant
+Exec=aeria
+Icon=aeria
 Terminal=false
 Categories=Utility;
 StartupNotify=false

@@ -62,7 +62,7 @@ int main() {
     Check("tag v1.2.3/../../x refusé", !updater::IsValidTag("v1.2.3/../../x"));
     Check("tag vide refusé", !updater::IsValidTag(""));
     Check("tag trop long refusé", !updater::IsValidTag("v123456.1.1"));
-    Check("nom de l'installateur", updater::AssetName("v1.2.3") == "ShadowAssistant-v1.2.3-windows-x64-setup.exe");
+    Check("nom de l'installateur", updater::AssetName("v1.2.3") == "Aeria-v1.2.3-windows-x64-setup.exe");
     Check("nom pour un tag invalide = vide", updater::AssetName("v1.2").empty());
     const std::string sums =
         "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  fichier-a.zip\r\n"

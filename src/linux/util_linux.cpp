@@ -11,7 +11,7 @@ namespace {
 
 std::string AppDir(const char* envVar, const char* fallback) {
     std::filesystem::path base = std::getenv(envVar) && *std::getenv(envVar) ? std::getenv(envVar) : HomeDir() + fallback;
-    auto dir = base / "ShadowAssistant";
+    auto dir = base / "Aeria";
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
     return dir.string();

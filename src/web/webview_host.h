@@ -27,7 +27,7 @@ void Restart(); // recrée la vue (après la mort du processus du navigateur)
 void Close();
 
 // Économie de mémoire (--in-process-gpu) : ~200 Mo de moins, animations moins fluides.
-// Enregistrée dans HKCU\Software\ShadowAssistant ; la changer recrée la vue.
+// Enregistrée dans HKCU\Software\Aeria ; la changer recrée la vue.
 bool LowMemory();
 void SetLowMemory(bool on);
 

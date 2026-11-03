@@ -1,6 +1,8 @@
 // Parties de util propres à Windows (le reste est dans util_common.cpp).
 #include "common/util.h"
 
+#include <filesystem>
+
 namespace util {
 
 std::wstring Widen(const std::string& s) {
@@ -28,7 +30,8 @@ std::wstring KnownFolder(REFKNOWNFOLDERID id) {
 }
 
 static std::wstring AppDir(REFKNOWNFOLDERID base) {
-    std::wstring dir = KnownFolder(base) + L"\\ShadowAssistant";
+    std::wstring root = KnownFolder(base);
+    std::wstring dir = root + L"\\Aeria";
     CreateDirectoryW(dir.c_str(), nullptr);
     return dir;
 }

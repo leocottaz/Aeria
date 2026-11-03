@@ -12,7 +12,7 @@
 namespace dock {
 
 #ifdef _WIN32
-constexpr wchar_t kClassName[] = L"ShadowAssistantDock";
+constexpr wchar_t kClassName[] = L"AeriaDock";
 constexpr UINT WM_APP_SUMMON = WM_APP + 3; // envoyé par une 2e instance : ouvrir le panneau
 #endif
 

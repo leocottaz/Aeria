@@ -1,9 +1,9 @@
-// Connexion : Claude Code (abonnement Pro), clé API, ou modèle gratuit (Gemini, Groq).
+// Connexion : catégorie Claude (abonnement Pro ou clé API), ChatGPT (clé OpenAI) ou Gratuit (Gemini, Groq).
 import { $, esc, icon, toast } from '../core/util.js';
 import { bridge, send, http, apiErrorText } from '../core/bridge.js';
 import { settings, setSetting, onSettingChange } from '../core/settings.js';
 import { S } from '../core/state.js';
-import { SERVICES, freeReady, listModels, knownModels, autoModel } from './free.js';
+import { SERVICES, freeReady, freeService, listModels, knownModels, autoModel } from './free.js';
 
 const INSTALL_CMD = 'irm https://claude.ai/install.ps1 | iex';
 
@@ -35,10 +35,12 @@ function renderCc() {
 
 function updateNoKey() {
   let title = '', text = '';
-  if (settings.backend === 'free') {
+  if (settings.backend === 'free' || settings.backend === 'chatgpt') {
     if (!freeReady()) {
-      title = `Ajoute une clé gratuite ${SERVICES[settings.freeService]?.name || ''}`;
-      text = 'Elle se crée gratuitement en quelques secondes (lien dans Réglages) et reste chiffrée par Windows.';
+      title = `Ajoute une clé ${SERVICES[freeService()].name}`;
+      text = settings.backend === 'chatgpt'
+        ? "Elle est chiffrée par Windows et ne quitte jamais ton PC, sauf vers l'API d'OpenAI. L'usage est facturé à part de l'abonnement ChatGPT."
+        : 'Elle se crée gratuitement en quelques secondes (lien dans Réglages) et reste chiffrée par Windows.';
     }
   } else if (settings.backend === 'pro') {
     if (S.cc.checked && !S.cc.found) {
@@ -92,7 +94,7 @@ function renderKey() {
 let freeTest = null; // { state: 'pending' | 'ok' | 'bad', text }
 
 function renderFree() {
-  const svc = SERVICES[settings.freeService] ? settings.freeService : 'gemini';
+  const svc = freeService();
   const s = SERVICES[svc];
   const k = S.freeKeys?.[svc];
   let html;
@@ -133,7 +135,7 @@ function saveFreeKey() {
   const v = $('#freeKeyInput').value.trim();
   if (!v) return;
   if (!bridge) { toast('Disponible dans l’application'); return; }
-  send('freekey', settings.freeService, v);
+  send('freekey', freeService(), v);
   $('#freeKeyInput').value = '';
 }
 
@@ -153,8 +155,8 @@ function setupConnection() {
   $('#freeKeyStatus').addEventListener('click', (e) => {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'test') testFree();
-    if (act === 'del') send('delfreekey', settings.freeService);
-    if (act === 'get') send('openurl', SERVICES[settings.freeService]?.keyUrl || SERVICES.gemini.keyUrl);
+    if (act === 'del') send('delfreekey', freeService());
+    if (act === 'get') send('openurl', SERVICES[freeService()].keyUrl);
   });
   $('#freeModel').addEventListener('change', (e) => setSetting('freeModel', e.target.value));
   $('#keySave').addEventListener('click', saveKey);
@@ -172,11 +174,17 @@ function setupConnection() {
     if (act === 'copy') navigator.clipboard?.writeText(INSTALL_CMD).then(() => toast('Commande copiée'), () => toast('Copie impossible'));
     if (act === 'docs') send('openurl', 'https://code.claude.com/docs/en/setup');
   });
-  onSettingChange((key) => {
+  let lastService = freeService();
+  onSettingChange((key, value) => {
+    // Catégorie (Claude, ChatGPT, Gratuit) → mode de connexion ; Claude reprend son dernier mode.
+    if (key === 'category') setSetting('backend', value === 'claude' ? settings.claudeMode : value);
+    if (key === 'backend' && (value === 'pro' || value === 'api')) setSetting('claudeMode', value);
     if (key === 'backend') { renderKey(); renderCc(); renderFree(); }
-    if (key === 'freeService') {
+    if (key === 'backend' || key === 'freeService') {
+      if (freeService() === lastService) return;
+      lastService = freeService();
       freeTest = null;
-      if (settings.freeModel) setSetting('freeModel', ''); // un modèle Gemini n'existe pas chez Groq
+      if (settings.freeModel) setSetting('freeModel', ''); // un modèle Gemini n'existe pas chez Groq ni chez OpenAI
       renderFree();
       testFree(true); // récupère la liste des modèles du service
     }

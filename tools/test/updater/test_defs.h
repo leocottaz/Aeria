@@ -1,7 +1,7 @@
 // Réglages du banc d'essai : serveur local au lieu de GitHub (jamais dans l'application livrée).
-#define SHADOW_UPDATE_BASE "http://127.0.0.1:8799/dl/"
-#define SHADOW_UPDATE_ALLOW_HTTP 1
-#define SHADOW_VERSION_STR "0.1.0"
+#define AERIA_UPDATE_BASE "http://127.0.0.1:8799/dl/"
+#define AERIA_UPDATE_ALLOW_HTTP 1
+#define AERIA_VERSION_STR "0.1.0"
 #define UNICODE
 #define _UNICODE
 #define WIN32_LEAN_AND_MEAN

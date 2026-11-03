@@ -169,7 +169,7 @@ function renderReminders(force = true) {
   if (pending.length) html += `<div class="sec-title">Maintenant</div>${pending.map((r) => remHTML(r, now)).join('')}`;
   if (upcoming.length) html += `<div class="sec-title">À venir</div>${upcoming.map((r) => remHTML(r, now)).join('')}`;
   if (done.length) html += `<div class="sec-title">Terminés <button type="button" data-act="clear-done">Tout effacer</button></div>${done.map((r) => remHTML(r, now)).join('')}`;
-  if (!html) html = `<div class="empty">${icon('bell')}<b>Aucun rappel</b><p>Écris ce dont tu veux te souvenir, ou demande à Maya : « rappelle-moi de… ».</p></div>`;
+  if (!html) html = `<div class="empty">${icon('bell')}<b>Aucun rappel</b><p>Écris ce dont tu veux te souvenir, ou demande à Aeria : « rappelle-moi de… ».</p></div>`;
   $('#remList').innerHTML = html;
 
   const n = upcoming.length;

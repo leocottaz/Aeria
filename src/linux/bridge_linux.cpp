@@ -86,7 +86,7 @@ void HandleMessage(const std::string& msg) {
         dock::OpenPanel();
     } else if (cmd == "hide") {
         dock::HideByUser();
-    } else if (cmd == "log") { // diagnostic de la page (SHADOW_DEBUG=1)
+    } else if (cmd == "log") { // diagnostic de la page (AERIA_DEBUG=1)
         g_printerr("[page] %s\n", arg.c_str());
     } else if (cmd == "quit") {
         host::Quit();

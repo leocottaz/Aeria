@@ -1,14 +1,14 @@
 // Mode « Clé API » : requêtes streaming à l'API Messages, avec outils.
 import { store, toast } from '../core/util.js';
 import { http, apiErrorText } from '../core/bridge.js';
-import { settings } from '../core/settings.js';
+import { settings, apiModel } from '../core/settings.js';
 import { convo, turn, handleEvent, rollback, endTurn, setStreaming, renderChat, scheduleLive } from './chat.js';
 import { TOOLS, execTool } from './tools.js';
 import { buildSystem } from './prompts.js';
 
 function streamStep() {
   Object.assign(turn, { blocks: [], stop: null, stopDetails: null, error: null, buf: '', base: 0 });
-  const model = settings.model;
+  const model = apiModel();
   const body = {
     model,
     max_tokens: 64000,

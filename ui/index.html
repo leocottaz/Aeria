@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Shadow Assistant</title>
+  <title>Aeria</title>
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/dock.css">
   <link rel="stylesheet" href="css/reminders.css">
@@ -69,7 +69,7 @@
 
     <form class="ask stagger" id="askForm" autocomplete="off" style="--d:60ms">
       <i data-icon="sparkles"></i>
-      <input id="askInput" placeholder="Demander à Maya…" spellcheck="false">
+      <input id="askInput" placeholder="Demander à Aeria…" spellcheck="false">
       <kbd>↵</kbd>
     </form>
 
@@ -135,10 +135,10 @@
       <div class="scroll" id="todoList"></div>
     </section>
 
-    <!-- Maya (l'assistante : Claude, ou le modèle gratuit) -->
+    <!-- Aeria (l'assistante : Claude, ou le modèle gratuit) -->
     <section class="view" data-view="claude">
       <div class="view-head">
-        <div><h2>Maya</h2><p id="chatModel"></p></div>
+        <div><h2>Aeria</h2><p id="chatModel"></p></div>
         <div class="head-actions"><button type="button" class="ghost" id="newChat"><i data-icon="pen"></i>Nouvelle conversation</button></div>
       </div>
       <div class="scroll chat" id="chat"></div>
@@ -148,7 +148,7 @@
         <button type="button" class="primary" data-goto="settings">Réglages</button>
       </div>
       <form class="glass chat-composer" id="chatForm">
-        <textarea id="chatInput" rows="1" placeholder="Écris à Maya…" spellcheck="false"></textarea>
+        <textarea id="chatInput" rows="1" placeholder="Écris à Aeria…" spellcheck="false"></textarea>
         <button type="submit" class="send" id="sendBtn" title="Envoyer (Entrée)"><i data-icon="up" class="i-send"></i><i data-icon="stop" class="i-stop"></i></button>
       </form>
     </section>
@@ -241,7 +241,7 @@
       <div class="set-layout">
         <!-- Une page par thème, affichée par renderSettings (settings.settingsPage) -->
         <nav class="set-nav" id="settingsNav" aria-label="Sections des réglages">
-          <button type="button" data-page="maya" title="Maya"><i data-icon="sparkles"></i><span>Maya</span></button>
+          <button type="button" data-page="aeria" title="Aeria"><i data-icon="sparkles"></i><span>Aeria</span></button>
           <button type="button" data-page="appearance" title="Apparence"><i data-icon="palette"></i><span>Apparence</span></button>
           <button type="button" data-page="behavior" title="Comportement"><i data-icon="eye"></i><span>Comportement</span></button>
           <button type="button" data-page="music" title="Musique"><i data-icon="music"></i><span>Musique</span></button>
@@ -249,29 +249,26 @@
           <button type="button" data-page="system" title="Système"><i data-icon="cpu"></i><span>Système</span></button>
         </nav>
         <div class="scroll settings" id="settingsBody">
-          <div class="set-page" data-page="maya">
+          <div class="set-page" data-page="aeria">
             <div class="card glass">
               <h3>Connexion</h3>
               <div class="field">
+                <div class="seg" data-setting="category">
+                  <button type="button" data-v="claude">Claude</button>
+                  <button type="button" data-v="chatgpt">ChatGPT</button>
+                  <button type="button" data-v="free">Gratuit</button>
+                </div>
+              </div>
+              <div class="field" id="claudeModeField">
                 <div class="seg" data-setting="backend">
                   <button type="button" data-v="pro">Abonnement Pro</button>
                   <button type="button" data-v="api">Clé API</button>
-                  <button type="button" data-v="free">Gratuit</button>
                 </div>
               </div>
               <div id="proSection">
                 <div class="field">
                   <label>Claude Code <span class="hint">utilise ton abonnement, sans facturation API</span></label>
                   <div class="key-status" id="ccStatus"></div>
-                </div>
-                <div class="field">
-                  <label>Modèle</label>
-                  <div class="seg" data-setting="ccModel">
-                    <button type="button" data-v="default">Par défaut</button>
-                    <button type="button" data-v="opus">Opus</button>
-                    <button type="button" data-v="sonnet">Sonnet</button>
-                    <button type="button" data-v="haiku">Haiku</button>
-                  </div>
                 </div>
               </div>
               <div id="apiSection">
@@ -283,27 +280,38 @@
                   </div>
                   <div class="key-status" id="keyStatus"></div>
                 </div>
-                <div class="field">
-                  <label>Modèle</label>
-                  <div class="seg" data-setting="model">
-                    <button type="button" data-v="claude-opus-5-5">Opus 5.5</button>
-                    <button type="button" data-v="claude-sonnet-5-5">Sonnet 5.5</button>
-                    <button type="button" data-v="claude-haiku-5-5">Haiku 5.5</button>
-                  </div>
-                </div>
               </div>
               <div class="field" id="effortField">
-                <label>Réflexion</label>
+                <label>Qualité <span class="hint">réponse rapide ou plus réfléchie</span></label>
                 <div class="seg" data-setting="effort">
                   <button type="button" data-v="low">Rapide</button>
                   <button type="button" data-v="medium">Équilibrée</button>
                   <button type="button" data-v="high">Approfondie</button>
                 </div>
               </div>
-              <!-- Modèle gratuit : choisi comme connexion, ou en secours quand Claude est indisponible -->
+              <details class="adv" id="proModelField">
+                <summary>Avancé : modèle<i data-icon="chevron"></i></summary>
+                <div class="seg" data-setting="ccModel">
+                  <button type="button" data-v="default">Par défaut</button>
+                  <button type="button" data-v="opus">Opus</button>
+                  <button type="button" data-v="sonnet">Sonnet</button>
+                  <button type="button" data-v="haiku">Haiku</button>
+                </div>
+              </details>
+              <details class="adv" id="apiModelField">
+                <summary>Avancé : modèle<i data-icon="chevron"></i></summary>
+                <div class="seg" data-setting="model">
+                  <button type="button" data-v="auto">Auto</button>
+                  <button type="button" data-v="claude-opus-5-5">Opus 5.5</button>
+                  <button type="button" data-v="claude-sonnet-5-5">Sonnet 5.5</button>
+                  <button type="button" data-v="claude-haiku-5-5">Haiku 5.5</button>
+                </div>
+                <p class="adv-note">Auto : Haiku en Rapide, Sonnet en Équilibrée, Opus en Approfondie.</p>
+              </details>
+              <!-- Service compatible OpenAI : catégorie Gratuit (Gemini, Groq), catégorie ChatGPT (OpenAI), ou secours quand Claude est indisponible -->
               <label class="toggle-row" id="freeFallbackRow">Passer au modèle gratuit si Claude est indisponible<span class="toggle"><input type="checkbox" data-setting="freeFallback"><span></span></span></label>
               <div id="freeFields">
-                <div class="field">
+                <div class="field" id="freeServiceField">
                   <label>Modèle gratuit <span class="hint">tes messages partent chez ce service ; quotas limités</span></label>
                   <div class="seg" data-setting="freeService">
                     <button type="button" data-v="gemini">Google Gemini</button>
@@ -311,22 +319,23 @@
                   </div>
                 </div>
                 <div class="field">
+                  <label id="chatgptKeyLabel">Clé API OpenAI <span class="hint">facturée à l'usage par OpenAI, distincte de l'abonnement ChatGPT</span></label>
                   <div class="key-row">
                     <input type="password" id="freeKeyInput" placeholder="Colle ta clé gratuite…" spellcheck="false">
                     <button type="button" class="primary" id="freeKeySave">Enregistrer</button>
                   </div>
                   <div class="key-status" id="freeKeyStatus"></div>
                 </div>
-                <div class="field" id="freeModelField">
-                  <label>Modèle</label>
+                <details class="adv" id="freeModelField">
+                  <summary>Avancé : modèle<i data-icon="chevron"></i></summary>
                   <select id="freeModel"></select>
-                </div>
+                </details>
               </div>
             </div>
             <div class="card glass">
               <h3>Instructions</h3>
               <div class="field">
-                <label>Ce que Maya doit savoir <span class="hint">pour les nouvelles conversations</span></label>
+                <label>Ce que Aeria doit savoir <span class="hint">pour les nouvelles conversations</span></label>
                 <textarea id="customInstr" rows="3" placeholder="Ex. : tutoie-moi, je suis développeur, réponds très brièvement…"></textarea>
               </div>
             </div>
@@ -415,7 +424,7 @@
           <div class="set-page" data-page="routines">
             <div class="card glass">
               <h3>Routines</h3>
-              <p class="hint card-hint">Des étapes lancées d’un coup : ouvrir tes applis, régler le volume, lancer la musique… Maya peut aussi les lancer : « lance le mode travail ».</p>
+              <p class="hint card-hint">Des étapes lancées d’un coup : ouvrir tes applis, régler le volume, lancer la musique… Aeria peut aussi les lancer : « lance le mode travail ».</p>
               <div id="routines"></div>
               <button type="button" class="ghost add-routine" id="addRoutine"><i data-icon="plus"></i>Nouvelle routine</button>
             </div>
@@ -427,7 +436,7 @@
               <label class="toggle-row">Son des notifications<span class="toggle"><input type="checkbox" data-setting="sound"><span></span></span></label>
               <label class="toggle-row">Lancer au démarrage de l'ordinateur<span class="toggle"><input type="checkbox" data-setting="autostart"><span></span></span></label>
               <label class="toggle-row"><span>Économie de mémoire <span class="hint">~200 Mo de moins, animations moins fluides</span></span><span class="toggle"><input type="checkbox" data-setting="lowMemory"><span></span></span></label>
-              <div class="toggle-row">Quitter Shadow Assistant<button type="button" class="ghost danger" id="quitBtn"><i data-icon="power"></i>Quitter</button></div>
+              <div class="toggle-row">Quitter Aeria<button type="button" class="ghost danger" id="quitBtn"><i data-icon="power"></i>Quitter</button></div>
             </div>
             <div class="card glass">
               <h3>Mises à jour</h3>

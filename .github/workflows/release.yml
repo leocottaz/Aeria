@@ -23,7 +23,7 @@ jobs:
             mingw-w64-x86_64-ninja
       - name: Compiler et empaqueter (ZIP portable)
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSHADOW_VERSION=${{ github.ref_name }}
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAERIA_VERSION=${{ github.ref_name }}
           cmake --build build
           cd build && cpack -G ZIP
       - name: Préparer les fichiers de l'installateur
@@ -33,12 +33,12 @@ jobs:
         run: |
           choco install innosetup -y --no-progress
           $version = "${{ github.ref_name }}".TrimStart('v')
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" "/DStageDir=$PWD\stage" "/DOutDir=$PWD\dist" installer\windows\shadow-assistant.iss
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" "/DStageDir=$PWD\stage" "/DOutDir=$PWD\dist" installer\windows\aeria.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Rassembler les fichiers à publier
         run: |
           mkdir -p out
-          cp build/ShadowAssistant-*-windows-x64.zip dist/ShadowAssistant-*-setup.exe out/
+          cp build/Aeria-*-windows-x64.zip dist/Aeria-*-setup.exe out/
       - uses: actions/upload-artifact@v4
         with:
           name: windows
@@ -52,18 +52,18 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libcurl4-openssl-dev libx11-dev
       - name: Compiler et empaqueter (archive portable)
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSHADOW_VERSION=${{ github.ref_name }}
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAERIA_VERSION=${{ github.ref_name }}
           cmake --build build
           cd build && cpack -G TGZ
       - name: Paquet .deb
         run: |
-          cmake -S . -B build-deb -G Ninja -DCMAKE_BUILD_TYPE=Release -DSHADOW_DEB_LAYOUT=ON -DSHADOW_VERSION=${{ github.ref_name }}
+          cmake -S . -B build-deb -G Ninja -DCMAKE_BUILD_TYPE=Release -DAERIA_DEB_LAYOUT=ON -DAERIA_VERSION=${{ github.ref_name }}
           cmake --build build-deb
           cd build-deb && cpack -G DEB
       - name: Rassembler les fichiers à publier
         run: |
           mkdir -p out
-          cp build/ShadowAssistant-*-linux-*.tar.gz build-deb/shadow-assistant_*.deb out/
+          cp build/Aeria-*-linux-*.tar.gz build-deb/aeria_*.deb out/
       - uses: actions/upload-artifact@v4
         with:
           name: linux
@@ -84,7 +84,7 @@ jobs:
         working-directory: dist
         run: |
           ls -l
-          sha256sum ShadowAssistant-* shadow-assistant_* > SHA256SUMS
+          sha256sum Aeria-* aeria_* > SHA256SUMS
           cat SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:

@@ -29,14 +29,14 @@ std::wstring Widen(const std::string& utf8);
 std::string Narrow(const std::wstring& utf16);
 
 std::wstring KnownFolder(REFKNOWNFOLDERID id);
-std::wstring RoamingDataDir(); // %APPDATA%\ShadowAssistant (créé au besoin)
-std::wstring LocalDataDir();   // %LOCALAPPDATA%\ShadowAssistant (créé au besoin)
+std::wstring RoamingDataDir(); // %APPDATA%\Aeria (créé au besoin)
+std::wstring LocalDataDir();   // %LOCALAPPDATA%\Aeria (créé au besoin)
 std::wstring ExeDir();
 bool FileExists(const std::wstring& path);
 #else
 std::string HomeDir();   // $HOME
-std::string ConfigDir(); // $XDG_CONFIG_HOME/ShadowAssistant (créé au besoin)
-std::string DataDir();   // $XDG_DATA_HOME/ShadowAssistant (créé au besoin)
+std::string ConfigDir(); // $XDG_CONFIG_HOME/Aeria (créé au besoin)
+std::string DataDir();   // $XDG_DATA_HOME/Aeria (créé au besoin)
 std::string ExeDir();
 #endif
 

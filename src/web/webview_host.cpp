@@ -10,8 +10,8 @@
 namespace webview {
 namespace {
 
-constexpr wchar_t kHost[] = L"shadow.local";
-constexpr wchar_t kRegKey[] = L"Software\\ShadowAssistant";
+constexpr wchar_t kHost[] = L"aeria.local";
+constexpr wchar_t kRegKey[] = L"Software\\Aeria";
 constexpr wchar_t kLowMemoryValue[] = L"LowMemory";
 constexpr UINT_PTR kRetryTimer = 0x5752; // n'entre pas en conflit avec les minuteurs du dock
 
@@ -55,7 +55,7 @@ private:
 };
 
 void Fail(const wchar_t* text) {
-    MessageBoxW(nullptr, text, L"Shadow Assistant", MB_ICONERROR);
+    MessageBoxW(nullptr, text, L"Aeria", MB_ICONERROR);
     PostQuitMessage(1);
 }
 

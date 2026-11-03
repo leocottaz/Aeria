@@ -10,7 +10,7 @@ $ErrorActionPreference = 'Stop'
 if (-not (Get-Command g++ -EA 0)) { $env:PATH = "C:\msys64\mingw64\bin;$env:PATH" }
 $t   = $PSScriptRoot
 $src = (Resolve-Path "$t\..\..\..\src").Path
-$work = Join-Path $env:TEMP 'shadow-updater-test'
+$work = Join-Path $env:TEMP 'aeria-updater-test'
 $bin = "$work\bin"; $web = "$work\web"
 Remove-Item $work -Recurse -Force -EA 0
 New-Item -ItemType Directory $bin, "$web\dl" -Force | Out-Null
@@ -26,7 +26,7 @@ $fake = [IO.File]::ReadAllBytes("$bin\fake_setup.exe")
 $hash = (Get-FileHash "$bin\fake_setup.exe" -Algorithm SHA256).Hash.ToLower()
 function Release($tag, $sumsLine, [bool]$withFile = $true, [bool]$withSums = $true) {
     $d = "$web\dl\$tag"; New-Item -ItemType Directory $d -Force | Out-Null
-    $name = "ShadowAssistant-$tag-windows-x64-setup.exe"
+    $name = "Aeria-$tag-windows-x64-setup.exe"
     if ($withFile) { [IO.File]::WriteAllBytes("$d\$name", $fake) }
     if ($withSums) { [IO.File]::WriteAllText("$d\SHA256SUMS", ($sumsLine -replace '@NAME@', $name) + "`n") }
 }
@@ -37,8 +37,8 @@ Release 'v9.9.6' "$hash  @NAME@" -withFile $false      # installateur manquant
 Release 'v9.9.5' '' -withSums $false                   # SHA256SUMS manquant
 
 # 3. Serveur local, banc d'essai, nettoyage
-$log = "$env:TEMP\shadow-fake-setup.log"
-Remove-Item $log, "$env:TEMP\ShadowAssistant-update" -Recurse -Force -EA 0
+$log = "$env:TEMP\aeria-fake-setup.log"
+Remove-Item $log, "$env:TEMP\Aeria-update" -Recurse -Force -EA 0
 $srv = Start-Job -FilePath "$t\serve.ps1" -ArgumentList $web, 8799
 try {
     Start-Sleep -Seconds 2
@@ -51,5 +51,5 @@ try {
     exit $code
 } finally {
     Stop-Job $srv -EA 0; Remove-Job $srv -Force -EA 0
-    Remove-Item "$env:TEMP\ShadowAssistant-update", $log, $work -Recurse -Force -EA 0
+    Remove-Item "$env:TEMP\Aeria-update", $log, $work -Recurse -Force -EA 0
 }

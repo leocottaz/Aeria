@@ -2,9 +2,9 @@
 # affiche le mode de compositing (GPU ou logiciel) puis la fluidité (frames.ps1).
 # Usage : tools/dev/frames-flags.ps1 -Flags @('', '--in-process-gpu')
 param([string[]]$Flags = @(''), [int]$Port = 9333)
-$exe = Join-Path $PSScriptRoot '..\..\build\ShadowAssistant.exe'
+$exe = Join-Path $PSScriptRoot '..\..\build\Aeria.exe'
 foreach ($f in $Flags) {
-    Get-Process ShadowAssistant -ErrorAction SilentlyContinue | Stop-Process
+    Get-Process Aeria -ErrorAction SilentlyContinue | Stop-Process
     Start-Sleep -Seconds 3
     $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = "--remote-debugging-port=$Port $f".Trim()
     Start-Process $exe

@@ -13,9 +13,12 @@ import { buildSystem, stripActions } from './prompts.js';
 const SERVICES = {
   gemini: { name: 'Gemini', base: '/v1beta/openai/', keyUrl: 'https://aistudio.google.com/apikey', fallbackModel: 'gemini-3.8-flash' },
   groq: { name: 'Groq', base: '/openai/v1/', keyUrl: 'https://console.groq.com/keys', fallbackModel: 'openai/gpt-oss-120b' },
+  openai: { name: 'OpenAI', base: '/v1/', keyUrl: 'https://platform.openai.com/api-keys', fallbackModel: 'gpt-5-mini' },
 };
 
-const service = () => (SERVICES[settings.freeService] ? settings.freeService : 'gemini');
+// Catégorie ChatGPT = OpenAI ; catégorie Gratuit (et secours de Claude) = Gemini ou Groq.
+const service = () => (settings.backend === 'chatgpt' ? 'openai'
+  : settings.freeService === 'groq' ? 'groq' : 'gemini');
 const freeReady = () => !!S.freeKeys?.[service()]?.hasKey;
 
 // ------------------------------------------------------------------ modèles
@@ -51,6 +54,12 @@ function autoModel(svc = service()) {
   };
   if (svc === 'gemini') {
     const chat = ids.filter((id) => /^gemini/.test(id) && /flash/.test(id) && !/lite|image|tts|audio|live|embed|exp|preview/.test(id));
+    if (chat.length) return chat.sort(newest)[0];
+  } else if (svc === 'openai') {
+    // Modèle de discussion « mini » le plus récent (sans variantes audio, image, recherche, versions datées).
+    const chat = ids.filter((id) => /^gpt-\d/.test(id) && !/audio|realtime|image|tts|transcribe|search|codex|instruct|chat-latest|\d{4}-\d{2}-\d{2}/.test(id));
+    const mini = chat.filter((id) => /-mini$/.test(id));
+    if (mini.length) return mini.sort(newest)[0];
     if (chat.length) return chat.sort(newest)[0];
   } else {
     if (ids.includes('openai/gpt-oss-120b')) return 'openai/gpt-oss-120b';
@@ -212,7 +221,7 @@ function freeErrorText(status, body) {
   if (status === -1) return `Ajoute une clé gratuite ${name} dans Réglages.`;
   if (status === -2 || status === 0) return detail || 'Erreur réseau.';
   if (status === 401 || status === 403) return `Clé ${name} invalide ou refusée.`;
-  if (status === 429) return `Quota gratuit de ${name} atteint, réessaie un peu plus tard.`;
+  if (status === 429) return `Quota de ${name} atteint (ou crédit épuisé), réessaie un peu plus tard.`;
   if (status === 404) return `Modèle introuvable chez ${name} : choisis-en un autre dans Réglages.`;
   if (status >= 500) return `${name} est indisponible pour le moment, réessaie.`;
   return detail || `Erreur ${status}.`;

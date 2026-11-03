@@ -13,7 +13,7 @@
 namespace api_key {
 namespace {
 
-const char* kSlots[] = {"anthropic", "groq", "gemini"};
+const char* kSlots[] = {"anthropic", "groq", "gemini", "openai"};
 
 std::map<std::string, std::string> g_keys;
 std::mutex g_mutex;
@@ -49,7 +49,7 @@ void Load() {
 bool Save(const std::string& key, const std::string& slot) {
     if (!IsKnown(slot)) return false;
     DATA_BLOB in{(DWORD)key.size(), (BYTE*)key.data()}, out{};
-    if (!CryptProtectData(&in, L"Shadow Assistant API key", nullptr, nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN, &out))
+    if (!CryptProtectData(&in, L"Aeria API key", nullptr, nullptr, nullptr, CRYPTPROTECT_UI_FORBIDDEN, &out))
         return false;
     std::ofstream f(KeyPath(slot), std::ios::binary | std::ios::trunc);
     f.write((char*)out.pbData, out.cbData);
@@ -81,7 +81,7 @@ std::string StatusJson(const std::string& slot) {
 }
 
 std::string FreeStatusJson() {
-    return "\"freeKeys\":{\"groq\":{" + StatusJson("groq") + "},\"gemini\":{" + StatusJson("gemini") + "}}";
+    return "\"freeKeys\":{\"groq\":{" + StatusJson("groq") + "},\"gemini\":{" + StatusJson("gemini") + "},\"openai\":{" + StatusJson("openai") + "}}";
 }
 
 } // namespace api_key

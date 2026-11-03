@@ -1,5 +1,5 @@
 // Clés API sous Linux : fichiers en lecture seule pour l'utilisateur (0600) dans
-// ~/.config/ShadowAssistant — même principe que les identifiants de Claude Code. Pas encore
+// ~/.config/Aeria — même principe que les identifiants de Claude Code. Pas encore
 // de trousseau (libsecret) : à faire. Elles ne sont jamais envoyées à la page.
 #include "ai/api_key.h"
 
@@ -16,7 +16,7 @@
 namespace api_key {
 namespace {
 
-const char* kSlots[] = {"anthropic", "groq", "gemini"};
+const char* kSlots[] = {"anthropic", "groq", "gemini", "openai"};
 
 std::map<std::string, std::string> g_keys;
 std::mutex g_mutex;
@@ -79,7 +79,7 @@ std::string StatusJson(const std::string& slot) {
 }
 
 std::string FreeStatusJson() {
-    return "\"freeKeys\":{\"groq\":{" + StatusJson("groq") + "},\"gemini\":{" + StatusJson("gemini") + "}}";
+    return "\"freeKeys\":{\"groq\":{" + StatusJson("groq") + "},\"gemini\":{" + StatusJson("gemini") + "},\"openai\":{" + StatusJson("openai") + "}}";
 }
 
 } // namespace api_key

@@ -8,7 +8,7 @@ namespace autostart {
 namespace {
 
 constexpr wchar_t kRunKey[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-constexpr wchar_t kValue[] = L"ShadowAssistant";
+constexpr wchar_t kValue[] = L"Aeria";
 
 } // namespace
 

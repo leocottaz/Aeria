@@ -45,6 +45,7 @@ struct FreeService {
 const FreeService kFree[] = {
     {"groq", L"api.groq.com", "/openai/v1/"},
     {"gemini", L"generativelanguage.googleapis.com", "/v1beta/openai/"},
+    {"openai", L"api.openai.com", "/v1/"},
 };
 
 // headers : en-têtes complets, clé comprise (chaque ligne terminée par \r\n).
@@ -55,7 +56,7 @@ void Run(std::shared_ptr<Request> req, std::wstring host, std::wstring method, s
     std::string errorBody;
     DWORD lastError = 0;
 
-    HINTERNET session = WinHttpOpen(L"ShadowAssistant/1.0", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
+    HINTERNET session = WinHttpOpen(L"Aeria/1.0", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
                                     WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     HINTERNET connect = session ? WinHttpConnect(session, host.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0) : nullptr;
     HINTERNET handle = connect ? WinHttpOpenRequest(connect, method.c_str(), path.c_str(), nullptr, WINHTTP_NO_REFERER,

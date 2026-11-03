@@ -139,7 +139,7 @@ function setupBar() {
 
 // Linux : la molette arrive du natif ({t:"wheel"}, dock_linux.cpp), en crans. On déplace la zone
 // défilante la plus proche de la souris qui a vraiment quelque chose à faire défiler.
-let wheelTraced = null; // SHADOW_DEBUG : une trace par élément survolé, pas une par cran
+let wheelTraced = null; // AERIA_DEBUG : une trace par élément survolé, pas une par cran
 function onWheel({ x, y, dy, debug }) {
   const hit = document.elementFromPoint(x, y);
   if (debug && hit !== wheelTraced) {

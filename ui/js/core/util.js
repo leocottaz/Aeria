@@ -55,12 +55,12 @@ function hydrateIcons(root = document) {
 const store = {
   get(key, fallback) {
     try {
-      const v = localStorage.getItem('shadow.' + key);
+      const v = localStorage.getItem('aeria.' + key);
       return v == null ? fallback : JSON.parse(v);
     } catch { return fallback; }
   },
   set(key, value) {
-    try { localStorage.setItem('shadow.' + key, JSON.stringify(value)); } catch { /* quota ou stockage indisponible */ }
+    try { localStorage.setItem('aeria.' + key, JSON.stringify(value)); } catch { /* quota ou stockage indisponible */ }
   },
 };
 

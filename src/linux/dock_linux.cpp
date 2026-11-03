@@ -239,7 +239,7 @@ void PlaceWindow(const Rect& r) {
 // ------------------------------------------------------------------ molette
 
 // La molette est prise dès GDK et remise à la page, qui déplace la zone sous la souris : sous KDE,
-// elle n'arrivait jamais au défilement de WebKit. SHADOW_DEBUG=1 trace ce qui arrive ici.
+// elle n'arrivait jamais au défilement de WebKit. AERIA_DEBUG=1 trace ce qui arrive ici.
 bool g_debug = false;
 bool g_sawSmooth = false;
 
@@ -505,7 +505,7 @@ void Init(void* window, void* layout, void* view) {
     gtk_widget_realize(g_window); // la découpe demande une fenêtre X existante
     ApplyShape();
     gdk_event_handler_set(OnGdkEvent, nullptr, nullptr);
-    g_debug = g_getenv("SHADOW_DEBUG");
+    g_debug = g_getenv("AERIA_DEBUG");
     if (g_debug) {
         GdkScreen* screen = gdk_display_get_default_screen(GdkDisp());
         g_printerr("[dock] session=%s wayland=%s x11=%d composite=%d rgba=%d webkit=%u.%u.%u\n", g_getenv("XDG_SESSION_TYPE"),

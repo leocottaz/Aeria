@@ -1,8 +1,9 @@
-// Shadow Assistant — dock en verre qui se cale en haut de l'écran.
+// Aeria — dock en verre qui se cale en haut de l'écran.
 // Point d'entrée : instance unique, initialisation des modules, boucle de messages.
 // Vue d'ensemble des modules : docs/ARCHITECTURE.md.
 
 #include "ai/api_key.h"
+#include "app/autostart.h"
 #include "app/dock.h"
 #include "features/media.h"
 #include "web/bridge.h"
@@ -13,7 +14,7 @@
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
     // Une seule instance : la seconde demande à la première d'ouvrir le panneau.
-    HANDLE single = CreateMutexW(nullptr, TRUE, L"Local\\ShadowAssistant.SingleInstance");
+    HANDLE single = CreateMutexW(nullptr, TRUE, L"Local\\Aeria.SingleInstance");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         if (HWND other = FindWindowW(dock::kClassName, nullptr)) {
             AllowSetForegroundWindow(ASFW_ANY);

@@ -133,7 +133,7 @@ function render() {
   document.body.classList.toggle('has-music', active);
   document.body.classList.toggle('music-playing', isPlaying());
   $('#np').hidden = !active;
-  $('#askInput').placeholder = active ? 'Demander…' : 'Demander à Maya…';
+  $('#askInput').placeholder = active ? 'Demander…' : 'Demander à Aeria…';
 
   setText($('#npTitle'), M.title);
   setText($('#npArtist'), M.artist);
@@ -261,7 +261,7 @@ const LYRICS_PATIENCE = [0, 5, 15, 40, 90];   // s avant chaque passe : les 503 
 // lrcmux agrège d'autres catalogues : aucun en-tête personnalisé, son CORS les refuse.
 const LRCLIB = {
   base: 'https://lrclib.net/api/', timeout: 10000, next: 0,
-  headers: { 'Lrclib-Client': 'ShadowAssistant (https://github.com/leocottaz/ShadowAssistant)' },
+  headers: { 'Lrclib-Client': 'Aeria (https://github.com/leocottaz/Aeria)' },
 };
 const LRCMUX = { base: 'https://api.lrcmux.dev/compat/lrclib/api/', timeout: 15000, next: 0, headers: {} };
 

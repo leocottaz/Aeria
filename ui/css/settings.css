@@ -27,6 +27,14 @@
 
 .key-row { display: flex; gap: 8px; }
 .key-row input { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; }
+details.adv { margin-top: 4px; }
+details.adv summary { display: inline-flex; align-items: center; gap: 6px; list-style: none; cursor: pointer; color: var(--fg2); font-size: 12px; transition: color .2s; }
+details.adv summary::-webkit-details-marker { display: none; }
+details.adv summary:hover { color: var(--fg); }
+details.adv summary .ic { width: 13px; transition: rotate .3s var(--smooth); }
+details.adv[open] summary .ic { rotate: 180deg; }
+details.adv > :not(summary) { margin-top: 8px; }
+.adv-note { color: var(--fg2); font-size: 11.5px; }
 .key-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 7px; color: var(--fg2); font-size: 12px; }
 .key-status .ok { color: #3ddc84; font-weight: 600; }
 .key-status .bad { color: #ff7b8a; font-weight: 600; }

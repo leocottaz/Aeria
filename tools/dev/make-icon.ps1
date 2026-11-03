@@ -1,6 +1,6 @@
-# Regenere src/app/shadow-assistant.ico : le meme orbe que MakeOrbIcon (src/app/tray.cpp), en plusieurs tailles.
+# Regenere src/app/aeria.ico : le meme orbe que MakeOrbIcon (src/app/tray.cpp), en plusieurs tailles.
 # Le fichier genere est commite : ce script ne sert que si le dessin de l'orbe change.
-param([string]$Out = (Join-Path $PSScriptRoot '..\..\src\app\shadow-assistant.ico'))
+param([string]$Out = (Join-Path $PSScriptRoot '..\..\src\app\aeria.ico'))
 Add-Type -AssemblyName System.Drawing
 
 function Get-Orb([int]$size) {

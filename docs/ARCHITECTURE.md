@@ -1,6 +1,6 @@
 # Architecture
 
-Shadow Assistant = un petit hôte natif **C++20** (`src/`) + une interface **HTML/CSS/JS** (`ui/`). Deux plateformes, **la même interface et le même protocole** :
+Aeria = un petit hôte natif **C++20** (`src/`) + une interface **HTML/CSS/JS** (`ui/`). Deux plateformes, **la même interface et le même protocole** :
 
 | | Windows | Linux |
 | --- | --- | --- |
@@ -50,7 +50,7 @@ Chaque module expose une petite interface dans son `.h` (un `namespace` : `dock:
 | `app/dock.*` | Fenêtre acrylique, états (`hidden`, `progress`, `peek`, `mini`, `music`, `bar`, `panel`), animations, détection de la souris, écran courant (rangé, le dock suit l'écran de la souris), repli auto, raccourci Ctrl+Alt+Espace, menu de l'icône, application des réglages. |
 | `app/tray.*` | Icône de notification (générée à l'exécution) et bulles Windows. |
 | `app/autostart.*` | Clé `Run` pour le lancement au démarrage. |
-| `web/webview_host.*` | Création de WebView2 (`--in-process-gpu` si l'économie de mémoire est activée, réglage dans `HKCU\Software\ShadowAssistant\LowMemory`), fond transparent, liens externes ouverts dans le navigateur, réception des messages, veille quand le dock est caché (`SetVisible(false)` : cible mémoire basse + `TrySuspend`), recréation si le processus meurt. |
+| `web/webview_host.*` | Création de WebView2 (`--in-process-gpu` si l'économie de mémoire est activée, réglage dans `HKCU\Software\Aeria\LowMemory`), fond transparent, liens externes ouverts dans le navigateur, réception des messages, veille quand le dock est caché (`SetVisible(false)` : cible mémoire basse + `TrySuspend`), recréation si le processus meurt. |
 | `web/bridge.*` | `PostToPage()` (depuis n'importe quel thread) et le routage des commandes de la page vers les modules. |
 | `ai/anthropic_http.*` | HTTPS en flux (lignes complètes) : mode Clé API vers `api.anthropic.com`, mode Gratuit vers Groq ou Gemini (hôte fixe, préfixe de chemin imposé, clé ajoutée en `Bearer`). |
 | `ai/claude_code.*` | Mode Abonnement Pro : lance `claude -p` sans outils, sans `ANTHROPIC_API_KEY`, dans un dossier dédié ; relaie le stream-json. |
@@ -75,7 +75,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `js/core/bridge.js` | `send(cmd, …args)`, `ask(cmd, args)` (promesse résolue par `{t:"reply"}`), `http` (requêtes en cours par id), messages d'erreur API. |
 | `js/core/state.js` | État partagé `S` (état du dock, onglet, connexion). |
 | `js/core/settings.js` | Réglages persistés, apparence, envoi au natif. `onSettingChange(fn)` pour réagir sans dépendance circulaire. |
-| `js/core/format.js`, `js/core/util.js` | Dates, icônes, stockage (`store`, clés préfixées `shadow.`), toast… |
+| `js/core/format.js`, `js/core/util.js` | Dates, icônes, stockage (`store`, clés préfixées `aeria.`), toast… |
 | `js/dock/dock.js` | États visuels, onglets (`NAV_TABS` = boutons de la barre ; Claude n'en a pas : orbe, champ « Demander », Ctrl+Alt+Espace), horloge, barre, raccourcis clavier. |
 | `js/dock/mini.js` | Mini-dock (dock rangé) : cloche + nombre de rappels sonnés (`setMiniAlerts`, appelé par `tick`), temps du minuteur (`setMiniTimer`), ligne de paroles (`setMiniLyric`) ; calcule la largeur et l'envoie au natif (`mini`). |
 | `js/features/reminders.js` | Rappels : saisie en français, liste, alertes. |
@@ -155,12 +155,12 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 
 | Quoi | Où |
 | --- | --- |
-| Rappels, to-do, notes, routines, réglages, conversation, dernières recherches de fichiers (clés `shadow.*`) | `localStorage` de WebView2 : `%LOCALAPPDATA%\ShadowAssistant\WebView2` |
-| Clé API (DPAPI) | `%APPDATA%\ShadowAssistant\apikey.bin` |
-| Clés gratuites (DPAPI) | `%APPDATA%\ShadowAssistant\geminikey.bin`, `groqkey.bin` |
-| Dossier de travail de Claude Code | `%LOCALAPPDATA%\ShadowAssistant\claude-chat` |
-| Lancement au démarrage | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\ShadowAssistant` |
-| Économie de mémoire | `HKCU\Software\ShadowAssistant\LowMemory` (DWORD, 1 par défaut) |
+| Rappels, to-do, notes, routines, réglages, conversation, dernières recherches de fichiers (clés `aeria.*`) | `localStorage` de WebView2 : `%LOCALAPPDATA%\Aeria\WebView2` |
+| Clé API (DPAPI) | `%APPDATA%\Aeria\apikey.bin` |
+| Clés gratuites (DPAPI) | `%APPDATA%\Aeria\geminikey.bin`, `groqkey.bin` |
+| Dossier de travail de Claude Code | `%LOCALAPPDATA%\Aeria\claude-chat` |
+| Lancement au démarrage | `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Aeria` |
+| Économie de mémoire | `HKCU\Software\Aeria\LowMemory` (DWORD, 1 par défaut) |
 
 ## Linux
 
@@ -168,26 +168,26 @@ Cible séparée : `cmake/linux.cmake` (GTK3, WebKitGTK, libcurl, X11). Les modul
 
 | Fichier `src/linux/` | Rôle (équivalent Windows) |
 | --- | --- |
-| `main_linux.cpp` | Fenêtre GTK, vue WebKitGTK, schéma `shadow://app/` (voir ci-dessous), instance unique par D-Bus (`GtkApplication`), `host::` (`Quit`, `OpenUrl`, `EvalJson`, `ChooseFile`). (`main.cpp`, `webview_host.cpp`) |
+| `main_linux.cpp` | Fenêtre GTK, vue WebKitGTK, schéma `aeria://app/` (voir ci-dessous), instance unique par D-Bus (`GtkApplication`), `host::` (`Quit`, `OpenUrl`, `EvalJson`, `ChooseFile`). (`main.cpp`, `webview_host.cpp`) |
 | `dock_linux.cpp` | Mêmes états, animations et repli que `app/dock.cpp`. Souris lue au pointeur global X11, Ctrl+Alt+Espace par `XGrabKey`, `reminders::Check()` chaque seconde. |
 | `bridge_linux.cpp` | Routeur des commandes de la page ; `PostToPage` remet le JSON sur la boucle GTK (`g_idle_add`). (`web/bridge.cpp`) |
 | `tray_linux.cpp` | Icône **StatusNotifierItem** en D-Bus (clic gauche = panneau, clic droit = menu GTK) et notifications `org.freedesktop.Notifications`. (`app/tray.cpp`) |
 | `anthropic_http_linux.cpp` | HTTPS en flux avec libcurl, mêmes règles (hôtes fixes pour le mode Gratuit). (`ai/anthropic_http.cpp`) |
 | `claude_code_linux.cpp` | `claude -p` par `fork`/`exec`, groupe de processus tué à l'annulation. (`ai/claude_code.cpp`) |
-| `api_key_linux.cpp` | Clés dans `~/.config/ShadowAssistant`, fichiers `0600` (pas de trousseau pour l'instant). (`ai/api_key.cpp`) |
+| `api_key_linux.cpp` | Clés dans `~/.config/Aeria`, fichiers `0600` (pas de trousseau pour l'instant). (`ai/api_key.cpp`) |
 | `media_linux.cpp` | Lecteur via **MPRIS2** (D-Bus) : mêmes messages `media` ; pochettes converties en data URL. (`features/media.cpp`) |
 | `pc_linux.cpp` | Recherche = parcours de `$HOME` (noms seulement, sans dossiers cachés ni `node_modules`) ; `xdg-open` ; volume `wpctl`/`pactl`. (`features/pc.cpp`) |
-| `autostart_linux.cpp` | `~/.config/autostart/shadow-assistant.desktop`. (`app/autostart.cpp`) |
+| `autostart_linux.cpp` | `~/.config/autostart/aeria.desktop`. (`app/autostart.cpp`) |
 | `util_linux.cpp` | Dossiers XDG, dossier de l'exécutable. (`common/util.cpp`) |
 | `host.h` | Petite interface entre `bridge_linux`/`pc_linux`/`tray_linux` et la fenêtre GTK. |
 
-**Page** : `ui/js/core/bridge.js` détecte `window.webkit.messageHandlers.shadow` ; le natif répond en appelant `window.__fromNative(json)`. Il ajoute la classe `linux` à `<html>` (pas d'évasements, pas de marge cachée : `--inset` = `kInset` = 0, KWin refuse les positions négatives). Le verre arrondi est `.ambient`, comme sous Windows, et la fenêtre est en plus découpée par une forme X11 (`ApplyShape`).
+**Page** : `ui/js/core/bridge.js` détecte `window.webkit.messageHandlers.aeria` ; le natif répond en appelant `window.__fromNative(json)`. Il ajoute la classe `linux` à `<html>` (pas d'évasements, pas de marge cachée : `--inset` = `kInset` = 0, KWin refuse les positions négatives). Le verre arrondi est `.ambient`, comme sous Windows, et la fenêtre est en plus découpée par une forme X11 (`ApplyShape`).
 
-**Molette** : interceptée dans GDK (`ForwardScroll`) et remise à la page par `{t:"wheel"}` (`onWheel`). `SHADOW_DEBUG=1` affiche sur la sortie d'erreur l'environnement graphique et chaque cran reçu.
+**Molette** : interceptée dans GDK (`ForwardScroll`) et remise à la page par `{t:"wheel"}` (`onWheel`). `AERIA_DEBUG=1` affiche sur la sortie d'erreur l'environnement graphique et chaque cran reçu.
 
 **Souris sous Wayland** : XWayland ne connaît la position que lorsque le curseur survole une de nos fenêtres. `dock_linux.cpp` pose une bande invisible de 1 px en haut de chaque écran (`RebuildEdges`) et suit les entrées/sorties (`PointerKnown`) ; hors de nos fenêtres, la position est ignorée. Sous X11, le pointeur global suffit.
 
-**Interface servie en `shadow://app/…`**, pas en `file://` : WebKit refuse les modules JavaScript chargés depuis `file://`. `ServeUi` ne sert que `ui/` (chemins normalisés, pas de sortie du dossier). Équivalent de `https://shadow.local/` avec WebView2.
+**Interface servie en `aeria://app/…`**, pas en `file://` : WebKit refuse les modules JavaScript chargés depuis `file://`. `ServeUi` ne sert que `ui/` (chemins normalisés, pas de sortie du dossier). Équivalent de `https://aeria.local/` avec WebView2.
 
 **Fenêtre** : un `GtkLayout` (taille minimale nulle) contient la vue, qui garde la taille du panneau complet ; la fenêtre la découpe, comme sous Windows.
 
@@ -201,27 +201,27 @@ Limites connues (voir aussi `Pièges` dans les notes) :
 
 | Quoi | Où |
 | --- | --- |
-| `localStorage` de la page | `~/.local/share/ShadowAssistant/localstorage` (cache WebKit : `~/.cache/ShadowAssistant`) |
-| Clés (Anthropic, Groq, Gemini) | `~/.config/ShadowAssistant/apikey`, `groqkey`, `geminikey` (0600) |
-| Dossier de travail de Claude Code | `~/.local/share/ShadowAssistant/claude-chat` |
-| Lancement à l'ouverture de session | `~/.config/autostart/shadow-assistant.desktop` |
+| `localStorage` de la page | `~/.local/share/Aeria/localstorage` (cache WebKit : `~/.cache/Aeria`) |
+| Clés (Anthropic, Groq, Gemini) | `~/.config/Aeria/apikey`, `groqkey`, `geminikey` (0600) |
+| Dossier de travail de Claude Code | `~/.local/share/Aeria/claude-chat` |
+| Lancement à l'ouverture de session | `~/.config/autostart/aeria.desktop` |
 
 ## Mises à jour
 
 **Répartition** : la page cherche et propose ; le natif ne fait que ce qui est sensible, **au clic** de l'utilisateur.
 
-1. `ui/js/features/updater.js` appelle `https://api.github.com/repos/leocottaz/ShadowAssistant/releases/latest` (au démarrage si la dernière vérification date de plus de 6 h, puis toutes les 6 h ; réglage « Vérifier automatiquement »). Ignorés : brouillons, préversions, tags qui ne sont pas `vN.N.N`, version déjà ignorée. Une notification native est envoyée une seule fois par version.
+1. `ui/js/features/updater.js` appelle `https://api.github.com/repos/leocottaz/Aeria/releases/latest` (au démarrage si la dernière vérification date de plus de 6 h, puis toutes les 6 h ; réglage « Vérifier automatiquement »). Ignorés : brouillons, préversions, tags qui ne sont pas `vN.N.N`, version déjà ignorée. Une notification native est envoyée une seule fois par version.
 2. Sans clic, rien n'est téléchargé. Au clic sur « Mettre à jour », la page envoie `update\n<tag>`.
-3. `updater::Install` (Windows) : refuse si le tag n'est pas `vN.N.N` ou si la copie n'a pas été installée par `Setup.exe` (`unins000.exe` absent) ; télécharge `SHA256SUMS` puis `ShadowAssistant-<tag>-windows-x64-setup.exe` **depuis `https://github.com/leocottaz/ShadowAssistant/releases/download/<tag>/` uniquement** (la page ne fournit ni URL ni empreinte), vérifie le SHA-256 (CNG), supprime le fichier et s'arrête s'il ne correspond pas, sinon lance `Setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /RELAUNCH=1`.
+3. `updater::Install` (Windows) : refuse si le tag n'est pas `vN.N.N` ou si la copie n'a pas été installée par `Setup.exe` (`unins000.exe` absent) ; télécharge `SHA256SUMS` puis `Aeria-<tag>-windows-x64-setup.exe` **depuis `https://github.com/leocottaz/Aeria/releases/download/<tag>/` uniquement** (la page ne fournit ni URL ni empreinte), vérifie le SHA-256 (CNG), supprime le fichier et s'arrête s'il ne correspond pas, sinon lance `Setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /RELAUNCH=1`.
 4. `Setup.exe` arrête le dock installé, remplace les fichiers, puis le relance (entrée `[Run]` conditionnée par `/RELAUNCH=1`).
 
 Garde-fous : HTTPS seulement, taille limitée (300 Mo), redirections suivies sauf HTTPS → HTTP. **Limite connue** : l'empreinte vient de la même release que le fichier ; un compte GitHub compromis pourrait publier les deux. Une vraie protection demande une signature par une clé gardée hors de GitHub (à faire), et `Setup.exe` n'est pas signé (SmartScreen).
 
-**Version** : `SHADOW_VERSION` (CMake) → `SHADOW_VERSION_STR`, sans le `v`. Un build local donne `0.0.0` : la vérification est désactivée (carte « développement »). `release.yml` génère `SHA256SUMS` pour tous les fichiers publiés ; le nom de l'installateur est un contrat entre `shadow-assistant.iss` (`OutputBaseFilename`), `AssetName()` et ce fichier.
+**Version** : `AERIA_VERSION` (CMake) → `AERIA_VERSION_STR`, sans le `v`. Un build local donne `0.0.0` : la vérification est désactivée (carte « développement »). `release.yml` génère `SHA256SUMS` pour tous les fichiers publiés ; le nom de l'installateur est un contrat entre `aeria.iss` (`OutputBaseFilename`), `AssetName()` et ce fichier.
 
 **Linux** : pas d'installation automatique (le `.deb` demande root ; les autres distributions ont leur gestionnaire de paquets). La page affiche la nouvelle version et le bouton « Télécharger » ouvre la page de la release (`canUpdate` est faux).
 
-**Tester** : `powershell -File tools\test\updater\run.ps1` compile le vrai `updater.cpp` avec un serveur local (macros `SHADOW_UPDATE_BASE` et `SHADOW_UPDATE_ALLOW_HTTP`, **jamais définies dans les builds livrés**) et un faux `Setup.exe`, puis joue 27 vérifications (tags piégés, fichier altéré, empreinte absente, 404, bonne version). Aperçu de la page : `fetch` remplaçable depuis la console, `window.__preview.updater.onUpdateInit({version:'0.1.0', canUpdate:true})` puis le bouton « Rechercher ».
+**Tester** : `powershell -File tools\test\updater\run.ps1` compile le vrai `updater.cpp` avec un serveur local (macros `AERIA_UPDATE_BASE` et `AERIA_UPDATE_ALLOW_HTTP`, **jamais définies dans les builds livrés**) et un faux `Setup.exe`, puis joue 27 vérifications (tags piégés, fichier altéré, empreinte absente, 404, bonne version). Aperçu de la page : `fetch` remplaçable depuis la console, `window.__preview.updater.onUpdateInit({version:'0.1.0', canUpdate:true})` puis le bouton « Rechercher ».
 
 ## Compiler et publier
 
@@ -229,13 +229,13 @@ Garde-fous : HTTPS seulement, taille limitée (300 Mo), redirections suivies sau
 | --- | --- |
 | Windows | `cmake --preset release && cmake --build --preset release` |
 | Linux | `cmake --preset linux-release && cmake --build --preset linux-release` (paquets : `libgtk-3-dev libwebkit2gtk-4.1-dev libcurl4-openssl-dev libx11-dev`) |
-| Archive portable | `cpack -G ZIP` (Windows) ou `cpack -G TGZ` (Linux), dans le dossier de build ; `-DSHADOW_VERSION=v0.1.0` fixe le nom |
-| Installateur Windows | `cmake --install <build> --prefix stage`, puis `ISCC /DAppVersion=0.1.0 /DStageDir=stage /DOutDir=dist installer\windows\shadow-assistant.iss` (Inno Setup 6) |
-| Paquet `.deb` | configurer avec `-DSHADOW_DEB_LAYOUT=ON`, puis `cpack -G DEB` |
+| Archive portable | `cpack -G ZIP` (Windows) ou `cpack -G TGZ` (Linux), dans le dossier de build ; `-DAERIA_VERSION=v0.1.0` fixe le nom |
+| Installateur Windows | `cmake --install <build> --prefix stage`, puis `ISCC /DAppVersion=0.1.0 /DStageDir=stage /DOutDir=dist installer\windows\aeria.iss` (Inno Setup 6) |
+| Paquet `.deb` | configurer avec `-DAERIA_DEB_LAYOUT=ON`, puis `cpack -G DEB` |
 
-**Installateur Windows** (`installer/windows/shadow-assistant.iss`) : installation par utilisateur (`PrivilegesRequired=lowest`, `{autopf}` = `%LOCALAPPDATA%\Programs`), raccourci du menu Démarrer, cases « Bureau » et « Lancer à l'ouverture de session » (décochées). Cette dernière écrit la même clé `Run\ShadowAssistant` que le réglage de l'application (`autostart.cpp`). `AppId` est fixe : c'est lui qui relie une mise à jour à l'installation précédente, ne jamais le changer. Avant d'installer ou de désinstaller, `StopInstalledDock` arrête *seulement* le `ShadowAssistant.exe` du dossier d'installation (comparaison du chemin exact), jamais une autre copie. La désinstallation ne retire la clé `Run` que si elle pointe vers le dossier installé, et conserve les données de l'utilisateur.
+**Installateur Windows** (`installer/windows/aeria.iss`) : installation par utilisateur (`PrivilegesRequired=lowest`, `{autopf}` = `%LOCALAPPDATA%\Programs`), raccourci du menu Démarrer, cases « Bureau » et « Lancer à l'ouverture de session » (décochées). Cette dernière écrit la même clé `Run\Aeria` que le réglage de l'application (`autostart.cpp`). `AppId` est fixe : c'est lui qui relie une mise à jour à l'installation précédente, ne jamais le changer. Avant d'installer ou de désinstaller, `StopInstalledDock` arrête *seulement* le `Aeria.exe` du dossier d'installation (comparaison du chemin exact), jamais une autre copie. La désinstallation ne retire la clé `Run` que si elle pointe vers le dossier installé, et conserve les données de l'utilisateur.
 
-**Paquet `.deb`** (`cmake/linux.cmake`, option `SHADOW_DEB_LAYOUT`) : `/opt/shadow-assistant` (exécutable + `ui/`), lien `/usr/bin/shadow-assistant`, `shadow-assistant.desktop` et l'icône SVG (`installer/linux/`). L'exécutable retrouve `ui/` par `/proc/self/exe`, donc le lien symbolique n'est pas un problème. Dépendances : `dpkg-shlibdeps` quand il existe (Debian, Ubuntu), sinon liste écrite à la main. L'architecture est fixée explicitement (sans `dpkg`, CPack choisirait `i386`). Une version qui ne commence pas par un chiffre devient `0.0.0~<nom>`.
+**Paquet `.deb`** (`cmake/linux.cmake`, option `AERIA_DEB_LAYOUT`) : `/opt/aeria` (exécutable + `ui/`), lien `/usr/bin/aeria`, `aeria.desktop` et l'icône SVG (`installer/linux/`). L'exécutable retrouve `ui/` par `/proc/self/exe`, donc le lien symbolique n'est pas un problème. Dépendances : `dpkg-shlibdeps` quand il existe (Debian, Ubuntu), sinon liste écrite à la main. L'architecture est fixée explicitement (sans `dpkg`, CPack choisirait `i386`). Une version qui ne commence pas par un chiffre devient `0.0.0~<nom>`.
 
 GitHub Actions (`.github/workflows/`) : `ci.yml` compile Windows (MSYS2/MinGW) et Linux (Ubuntu 24.04) à chaque push et pull request. `release.yml` se déclenche sur un tag `v*` : il construit l'installateur et le ZIP Windows, le `.deb` et le `tar.gz` Linux, et les attache à une GitHub Release.
 
@@ -249,7 +249,7 @@ git tag v0.1.0 && git push origin v0.1.0
 - **Ajouter un message vers la page** : `bridge::PostToPage("{\"t\":\"…\"}")` (utiliser `util::Json` pour les chaînes) et un `case` dans `onNative` (`ui/js/main.js`).
 - **Ajouter un module natif** : `src/<domaine>/nom.h` + `nom.cpp`, un `namespace nom`, et une ligne dans `add_executable` (`CMakeLists.txt`). Pour Linux : `src/linux/nom_linux.cpp` avec la même interface, et une ligne dans `cmake/linux.cmake`.
 - **Ajouter une fonctionnalité à l'interface** : `ui/js/features/nom.js` qui exporte `setupNom()` / `renderNom()`, appelés dans `init()` (`ui/js/main.js`) ; son style dans `ui/css/nom.css`, lié dans `index.html`. Pour un nouvel onglet : sa vue dans `index.html` et son entrée dans `NAV_TABS` (`ui/js/dock/dock.js`).
-- **Ajouter un réglage** : valeur par défaut dans `DEFAULTS` (`ui/js/core/settings.js`) et un contrôle avec `data-setting="nom"` dans la bonne page (`.set-page`) de `index.html` : `maya`, `appearance`, `behavior`, `music`, `routines` ou `system` (segmenté, curseur ou interrupteur sont gérés automatiquement). Pour amener l'utilisateur sur une page : `switchTab('settings')` puis `openSettingsPage('…')`. S'il concerne le natif : l'ajouter à `NATIVE_KEYS` et `sendConfig()`, puis le lire dans `dock::ApplyConfig`.
+- **Ajouter un réglage** : valeur par défaut dans `DEFAULTS` (`ui/js/core/settings.js`) et un contrôle avec `data-setting="nom"` dans la bonne page (`.set-page`) de `index.html` : `aeria`, `appearance`, `behavior`, `music`, `routines` ou `system` (segmenté, curseur ou interrupteur sont gérés automatiquement). Pour amener l'utilisateur sur une page : `switchTab('settings')` puis `openSettingsPage('…')`. S'il concerne le natif : l'ajouter à `NATIVE_KEYS` et `sendConfig()`, puis le lire dans `dock::ApplyConfig`.
 - **Ajouter un outil pour Claude** : définition dans `TOOLS` et exécution dans `execTool` (`ui/js/chat/tools.js`), libellé dans `toolHTML` (`ui/js/chat/chat.js`). Pour le mode Pro, documenter la ligne d'action dans `PRO_ACTIONS` (`prompts.js`) et la lire dans `commitCcAnswer` (`pro.js`).
 - **Changer la taille de la barre** : `kBarH`/`kInset` dans `src/app/dock.cpp` **et** `src/linux/dock_linux.cpp`, **et** `--bar-h`/`--inset` dans `ui/css/base.css`.
 
@@ -258,6 +258,6 @@ git tag v0.1.0 && git push origin v0.1.0
 - **Interface seule** : servir `ui/` avec n'importe quel serveur local et ouvrir `index.html`. Sans l'hôte natif, la page passe en mode aperçu (panneau ouvert, API désactivée).
 - **Dans l'appli** : lancer avec `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`, puis ouvrir `edge://inspect` ; ou appuyer sur F12 dans le dock.
 - **Lecteur dans l'aperçu** : `window.__preview.onNative({t:'media', active:true, title:'…', status:'playing', pos:0, dur:200000, at:Date.now(), …})` simule un morceau, `window.__preview.previewLyrics([{t:0, text:'…'}])` des paroles factices.
-- **Linux, interface seule** : comme sous Windows (serveur local, mode aperçu). **Linux, dans l'appli** : lancer `ShadowAssistant` depuis le dossier de build ; sous WSL, WSLg fournit l'affichage (X11), mais ignore les positions de fenêtre demandées et donne le focus à l'ouverture. Pour suivre la fenêtre sans outil graphique, un petit programme Xlib qui interroge `XQueryTree` suffit.
+- **Linux, interface seule** : comme sous Windows (serveur local, mode aperçu). **Linux, dans l'appli** : lancer `Aeria` depuis le dossier de build ; sous WSL, WSLg fournit l'affichage (X11), mais ignore les positions de fenêtre demandées et donne le focus à l'ouverture. Pour suivre la fenêtre sans outil graphique, un petit programme Xlib qui interroge `XQueryTree` suffit.
 - **Plantage en Release seulement** : compiler avec le preset `relwithdebinfo` et lancer sous `gdb` (paquet `mingw-w64-x86_64-gdb` de MSYS2) pour avoir la pile d'appels.
 - **Mode Pro sans consommer de quota** : un faux `claude.exe` placé plus tôt dans le `PATH` (ni `%USERPROFILE%\.local\bin` ni winget ne doivent contenir le vrai) reçoit les mêmes arguments.
