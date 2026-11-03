@@ -143,11 +143,23 @@ function setupBar() {
   $('#pill').addEventListener('click', (e) => openTab(e.target.closest('#pillTimer') ? 'timer' : alertTab() || miniTab()));
 }
 
+// Linux (WebKitGTK sous Plasma/Wayland) : la page peut être affichée agrandie (vue native de 960 px =
+// 768 px CSS, soit ×1,25) : le dock mesure alors plus que sa fenêtre et le bas est coupé. La vue native
+// fait toujours `settings.width` de large, donc l'écart donne le facteur : on le compense par `zoom`.
+let fit = 1; // pixels CSS de la page par pixel natif (1 = aucun écart)
+function fitLinuxScale() {
+  const root = document.documentElement;
+  if (!root.classList.contains('linux')) return;
+  const k = innerWidth / settings.width;
+  fit = Math.abs(k - 1) > 0.02 ? k : 1;
+  root.style.zoom = fit === 1 ? '' : String(fit);
+}
+
 // Linux : la molette arrive du natif ({t:"wheel"}, dock_linux.cpp), en crans. On déplace la zone
 // défilante la plus proche de la souris qui a vraiment quelque chose à faire défiler.
 let wheelTraced = null; // AERIA_DEBUG : une trace par élément survolé, pas une par cran
 function onWheel({ x, y, dy, debug }) {
-  const hit = document.elementFromPoint(x, y);
+  const hit = document.elementFromPoint(x * fit, y * fit); // x, y en pixels natifs
   if (debug && hit !== wheelTraced) {
     wheelTraced = hit;
     const name = (el) => `${el.tagName.toLowerCase()}#${el.id}.${String(el.className?.baseVal ?? el.className).split(' ')[0]}`;
@@ -157,7 +169,7 @@ function onWheel({ x, y, dy, debug }) {
       rows.push(`${name(el)} ${el.clientHeight}/${el.scrollHeight} y=${Math.round(r.top)}-${Math.round(r.bottom)} ${getComputedStyle(el).overflowY}`);
     }
     const root = getComputedStyle(document.documentElement);
-    send('log', `${S.st}/${S.tab} vue=${innerWidth}x${innerHeight} panel-h=${root.getPropertyValue('--panel-h')} police=${getComputedStyle(document.body).fontFamily}\n${rows.join('\n')}`);
+    send('log', `${S.st}/${S.tab} vue=${innerWidth}x${innerHeight} dpr=${devicePixelRatio} zoom=${fit} panel-h=${root.getPropertyValue('--panel-h')} police=${getComputedStyle(document.body).fontFamily}\n${rows.join('\n')}`);
   }
   for (let el = hit; el && el !== document.body; el = el.parentElement) {
     const overflow = getComputedStyle(el).overflowY;
@@ -169,6 +181,8 @@ function onWheel({ x, y, dy, debug }) {
 }
 
 function setupGlobal() {
+  addEventListener('resize', fitLinuxScale);
+  fitLinuxScale();
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { send('hide'); return; }
     if (e.ctrlKey && !e.altKey && /^[-+=0_]$/.test(e.key)) e.preventDefault(); // pas de zoom au clavier
