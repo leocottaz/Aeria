@@ -19,7 +19,8 @@ function ccStep(prompt) {
   if (!bridge) {
     setTimeout(() => http.onError(id, -2, "Aperçu navigateur : Claude Code n'est disponible que dans l'application."), 300);
   } else {
-    send('cc', [id, settings.ccModel, settings.effort, convo.ccSession || '', buildSystem('pro'), prompt].map(clean).join('\x1f'));
+    // Champ « outils » : seule la recherche web est possible (le natif ne connaît que « web » ou rien).
+    send('cc', [id, settings.ccModel, settings.effort, convo.ccSession || '', settings.webSearch ? 'web' : '', buildSystem('pro'), prompt].map(clean).join('\x1f'));
   }
   setStreaming(true);
 }
@@ -93,6 +94,7 @@ function actionToTool(kind, body) {
     return ['search_files', { words, extension, from, to }];
   }
   if (kind === 'ouvrir') return ['open_file', { number: parseInt(body, 10) }];
+  if (kind === 'site') return ['open_url', { url: body.trim() }];
   if (kind === 'routine') return ['run_routine', { name: body.trim() }];
   if (kind === 'minuteur') {
     const what = body.trim().toLowerCase();

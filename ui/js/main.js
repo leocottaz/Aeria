@@ -111,7 +111,7 @@ function init() {
     syncVoice();
     // Le natif recrée la vue avec les nouvelles options : on laisse l'interrupteur finir.
     onSettingChange((key, value) => {
-      if (key === 'voiceWake') setTimeout(syncVoice, 50); // le natif a reçu la config : il annonce son état
+      if (key === 'voiceWake' || key === 'voiceModel') setTimeout(syncVoice, 50); // le natif a reçu la config : il annonce son état
       const linux = document.documentElement.classList.contains('linux'); // là-bas, rien à recharger
       if (key === 'lowMemory' && !linux) { toast('Rechargement du dock…'); setTimeout(() => send('lowmem', value ? '1' : '0'), 450); }
     });

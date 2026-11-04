@@ -2,7 +2,7 @@
 # phrases WAV dites par la voix française de Windows. Aucun micro réel, aucun message envoyé à Claude.
 # Prérequis : g++ (MSYS2 MINGW64), un dossier de build Windows déjà compilé (pour les bibliothèques whisper)
 # et le modèle ggml-small-q5_1.bin (celui que l'appli télécharge dans %APPDATA%\Aeria\models).
-# Usage : run.ps1 [-Build build\release]   → attendu : « OK » partout, puis « RESULTAT opens=1 heard=1 » ×2
+# Usage : run.ps1 [-Build build\release]   → attendu : « OK » partout, puis « RESULTAT heard=1 » ×2
 param([string]$Build = 'build\release', [string]$Model = "$env:APPDATA\Aeria\models\ggml-small-q5_1.bin")
 $ErrorActionPreference = 'Stop'
 if (-not (Get-Command g++ -EA 0)) { $env:PATH = "C:\msys64\mingw64\bin;$env:PATH" }

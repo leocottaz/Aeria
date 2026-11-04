@@ -185,32 +185,52 @@ body:not(.preview) .ambient {
 @keyframes lyric-in { from { opacity: 0; transform: translateY(12px) scale(.97); } }
 @keyframes lyric-out { to { opacity: 0; transform: translateY(-12px) scale(.97); } }
 
-/* ---------------------------------------------------------------- encoche « j'écoute » */
-/* S'ouvre quand « Aeria » a été entendu (état natif « listen », src/features/voice.cpp). Largeur et
-   hauteur = kListenW et kMiniH dans src/app/dock.cpp. Rien n'y bouge en continu (voir Pièges) :
-   une seule animation, à l'apparition. */
-:root { --listen-w: 190px; } /* = kListenW dans src/app/dock.cpp */
+/* ---------------------------------------------------------------- pilule « Aeria » */
+/* S'ouvre quand « Aeria » a été entendu (état natif « listen », src/features/voice.cpp) : « Je t'écoute… », ce
+   qu'on dit en direct, puis la réponse (js/features/pill.js). Sa taille est mesurée par pill.js et envoyée au natif
+   (commande « pill ») ; au départ 190 × 40 = kListenW et kMiniH dans src/app/dock.cpp. Rien n'y bouge en continu
+   (voir Pièges) : une seule animation, à l'apparition. */
+:root { --listen-w: 190px; --listen-h: 40px; }
 .listen {
   position: fixed;
   top: var(--inset);
   left: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
   width: var(--listen-w);
-  height: var(--mini-h);
+  height: var(--listen-h);
+  overflow: hidden;
+  z-index: 30; /* au-dessus de la conversation : son contenu caché ne doit pas capter la souris ni la molette */
   color: var(--fg);
-  font: 650 13.5px/1 var(--font-d);
-  white-space: nowrap;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   translate: -50% 0;
   transition: opacity .3s var(--smooth), visibility 0s .3s;
 }
-.st-listen .listen { opacity: 1; visibility: visible; transition-delay: 0s; }
+.st-listen .listen { opacity: 1; visibility: visible; pointer-events: auto; cursor: pointer; transition-delay: 0s; }
 .st-progress .listen, .st-bar .listen, .st-panel .listen { transition: none; }
+.listen-in { display: flex; flex-direction: column; gap: 8px; padding: 8px 14px; }
+.listen.has-text .listen-in { padding-bottom: 14px; }
+.listen-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 24px;
+  font: 650 13.5px/1 var(--font-d);
+  white-space: nowrap;
+}
+.listen.has-text .listen-head { justify-content: flex-start; }
+/* Hauteur totale <= 300 (kPillMaxH dans src/app/dock.cpp) : en-tête 24, phrase 3 lignes au plus, réponse 170. */
+.listen-said { display: -webkit-box; margin: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; color: var(--fg2); font: 500 13.5px/1.4 var(--font); }
+.listen.is-answer .listen-said { color: var(--fg3); font-size: 12.5px; }
+.listen-answer { max-height: 170px; overflow-y: auto; font-size: 13.5px; user-select: text; cursor: auto; }
+.listen-x { display: none; margin-left: auto; width: 22px; height: 22px; border-radius: 50%; color: var(--fg3); }
+.listen-x:hover { background: var(--hover); color: var(--fg); }
+.listen-x .ic { width: 13px; height: 13px; }
+.listen.has-text .listen-x { display: grid; place-items: center; }
+.listen-answer::-webkit-scrollbar { width: 6px; }
+.listen .i-ai, .listen.is-answer .i-mic { display: none; }
+.listen.is-answer .i-ai { display: block; }
 .listen-mic {
   display: grid;
   place-items: center;
@@ -221,6 +241,7 @@ body:not(.preview) .ambient {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 14px -2px var(--accent);
   color: #fff;
 }
+.listen-mic { flex: none; }
 .listen-mic .ic { width: 13px; height: 13px; }
 .st-listen .listen-mic { animation: pop .5s var(--spring) both; }
 

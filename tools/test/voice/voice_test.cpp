@@ -19,7 +19,6 @@
 namespace {
 std::string g_model;
 std::vector<std::string> g_wavs;
-std::atomic<int> g_opens{0};
 std::atomic<bool> g_feeding{false}, g_run{false};
 std::thread g_thread;
 std::mutex g_log;
@@ -79,9 +78,8 @@ void StopCapture() {
     g_run = false;
     if (g_thread.joinable()) g_thread.join();
 }
-std::string ModelPath() { return g_model; }
+std::string ModelPath(const std::string&) { return g_model; }
 bool Download(const std::string&, const std::string&, uint64_t, const std::string&, const std::function<void(int)>&, std::string&) { return false; }
-void OpenDock() { g_opens++; }
 void ShowListening(bool on) { std::printf("  [encoche %s]\n", on ? "ouverte" : "fermée"); }
 } // namespace voice::platform
 
@@ -128,10 +126,10 @@ int main(int argc, char** argv) {
     else voice::Apply(true);
     auto t0 = std::chrono::steady_clock::now();
     while (g_feeding && std::chrono::steady_clock::now() - t0 < std::chrono::seconds(120)) std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    std::this_thread::sleep_for(std::chrono::seconds(6)); // le temps de finir les dernières transcriptions
+    std::this_thread::sleep_for(std::chrono::seconds(std::getenv("AERIA_TAIL") ? std::atoi(std::getenv("AERIA_TAIL")) : 6)); // le temps de finir les dernières transcriptions (modèle lent : AERIA_TAIL=30)
     voice::Shutdown();
     int heard = 0;
     for (const auto& p : g_posts) if (p.find("\"heard\"") != std::string::npos) heard++;
-    std::printf("RESULTAT opens=%d heard=%d\n", g_opens.load(), heard);
+    std::printf("RESULTAT heard=%d\n", heard);
     return fails ? 1 : 0;
 }

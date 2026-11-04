@@ -14,7 +14,6 @@ namespace dock {
 #ifdef _WIN32
 constexpr wchar_t kClassName[] = L"AeriaDock";
 constexpr UINT WM_APP_SUMMON = WM_APP + 3; // envoyé par une 2e instance : ouvrir le panneau
-constexpr UINT WM_APP_OPEN = WM_APP + 5;   // OpenPanelAsync : ouvrir le panneau (sans le refermer s'il l'est déjà)
 constexpr UINT WM_APP_LISTEN = WM_APP + 6; // SetListeningAsync : WPARAM = 1 (écoute) ou 0
 constexpr UINT WM_APP_DRAG = WM_APP + 7;   // drop_edge : des fichiers glissés arrivent au bord haut de l'écran
 #endif
@@ -51,7 +50,6 @@ void ApplyConfig(const std::string& payload);
 void OnPageReady();          // envoie l'état courant et joue l'intro au premier lancement
 void NotifyState();          // {"t":"state",…} vers la page
 void OpenPanel();            // ouvre et active le panneau
-void OpenPanelAsync();       // idem, depuis n'importe quel thread (commande vocale)
 void SetListeningAsync(bool on); // commande vocale : encoche « j'écoute » (ignorée si la barre est déjà ouverte), depuis n'importe quel thread
 void ShowBar();              // replie le panneau sur la barre
 void HideByUser();           // Échap, raccourci… : pas de réapparition tant que la souris reste en haut
@@ -60,5 +58,6 @@ void HoldFor(int ms);        // empêche le repli automatique pendant ms
 void RevealBriefly(int ms);  // fait descendre la barre (rappel qui sonne, minuteur…)
 void RevealMusic(int ms, int widthDip); // nouveau morceau : seulement la carte musique (largeur selon le titre)
 void SetMini(int widthDip);  // largeur du mini-dock (rappels, paroles) voulue par la page, 0 = aucun
+void SetPill(int widthDip, int heightDip, bool keep); // pilule de la commande vocale : taille voulue par la page, 0 = fermée
 
 } // namespace dock

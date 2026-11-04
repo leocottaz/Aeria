@@ -92,6 +92,7 @@
   padding: 4px 8px;
   border: 0;
   background: none;
+  cursor: text;
   font: 650 21px/1.25 var(--font-d);
   letter-spacing: -.3px;
 }
@@ -153,6 +154,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   outline: none;
+  cursor: text; /* body force « default » */
   font-size: 14.5px;
   line-height: 1.6;
   overflow-wrap: anywhere;

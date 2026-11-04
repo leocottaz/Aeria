@@ -182,6 +182,7 @@ html.linux #flareField { display: none; } /* Linux : pas d'évasement (voir --fl
 html.linux #fullscreenRevealRow { display: none; } /* Linux : pas de détection du plein écran */
 
 /* Carte « Voix » : avancement du téléchargement du modèle. */
+.voice-actions { display: flex; gap: 8px; flex: none; }
 .voice-bar { display: block; height: 4px; border-radius: 2px; background: var(--field); overflow: hidden; }
 .voice-bar > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .3s var(--smooth); }
 #voiceStatus.error { color: #ff7a7a; }

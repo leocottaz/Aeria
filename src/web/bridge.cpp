@@ -80,6 +80,9 @@ void HandleMessage(const std::string& msg) {
         dock::RevealMusic(f.empty() ? 0 : std::atoi(f[0].c_str()), f.size() > 1 ? std::atoi(f[1].c_str()) : 0);
     } else if (cmd == "mini") {
         dock::SetMini(std::atoi(arg.c_str()));
+    } else if (cmd == "pill") { // largeur, hauteur (DIP), garder ouverte (0/1), séparés par « , »
+        auto f = util::Split(arg, ',', 3);
+        dock::SetPill(f.size() > 0 ? std::atoi(f[0].c_str()) : 0, f.size() > 1 ? std::atoi(f[1].c_str()) : 0, f.size() > 2 && f[2] == "1");
 
     // --- lecteur de musique
     } else if (cmd == "media") { // toggle | next | prev | seek\n<ms> | sources\n<deezer|all> | refresh

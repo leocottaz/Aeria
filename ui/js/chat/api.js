@@ -6,6 +6,12 @@ import { convo, turn, saveConvo, handleEvent, rollback, endTurn, setStreaming, r
 import { TOOLS, execTool } from './tools.js';
 import { buildSystem } from './prompts.js';
 
+// Outil serveur : l'API lance elle-même les recherches (facturées à part) et renvoie les résultats dans le flux.
+const WEB_SEARCH_TOOL = { type: 'web_search_20250305', name: 'web_search', max_uses: 3 };
+
+// Si l'API refuse la recherche (non activée pour l'organisation), on dit comment s'en passer.
+const webHint = (message, raw) => (settings.webSearch && /web.?search/i.test(String(raw)) ? `${message} Désactive « Chercher sur internet » dans Réglages › Aeria.` : message);
+
 function streamStep() {
   Object.assign(turn, { blocks: [], stop: null, stopDetails: null, error: null, buf: '', base: 0 });
   const model = apiModel();
@@ -17,7 +23,7 @@ function streamStep() {
     output_config: { effort: settings.effort },
     cache_control: { type: 'ephemeral' },
     system: buildSystem('api'),
-    tools: TOOLS,
+    tools: settings.webSearch ? [...TOOLS, WEB_SEARCH_TOOL] : TOOLS,
     messages: convo.messages.map(({ role, content }) => ({ role, content })), // sans nos champs (via)
   };
   // Repli automatique côté serveur si le modèle décline (pas disponible pour Haiku).
@@ -59,7 +65,7 @@ function finalBlocks(partial) {
       if (b.type === 'text' && b.text) out.push({ type: 'text', text: b.text });
       continue;
     }
-    if (partial && b.type === 'tool_use') continue;
+    if (partial && (b.type === 'tool_use' || b.type === 'server_tool_use' || b.type === 'web_search_tool_result')) continue;
     if (b.type === 'thinking' && !b.signature) continue;
     const { _json, _invalid, _complete, ...clean } = b;
     out.push(clean);
@@ -90,7 +96,7 @@ function onStreamDone(cancelled) {
   if (!turn) return;
   if (turn.error) {
     const overloaded = turn.error.type === 'overloaded_error';
-    rollback(overloaded ? "L'API Claude est surchargée, réessaie." : (turn.error.message || 'Erreur pendant la réponse.'), overloaded);
+    rollback(overloaded ? "L'API Claude est surchargée, réessaie." : webHint(turn.error.message || 'Erreur pendant la réponse.', turn.error.message), overloaded);
     return;
   }
   if (cancelled) {
@@ -108,6 +114,12 @@ function onStreamDone(cancelled) {
   const blocks = finalBlocks(false);
   if (!blocks.length) { rollback('Réponse vide, réessaie.'); return; }
   convo.messages.push({ role: 'assistant', content: blocks });
+  if (turn.stop === 'pause_turn' && turn.loops < 8) { // recherche longue : l'API demande de reprendre là où elle s'est arrêtée
+    turn.loops++;
+    renderChat();
+    streamStep();
+    return;
+  }
   if (turn.stop === 'tool_use' && turn.loops < 8) {
     // Certains outils attendent le natif (recherche de fichiers) : la carte reste « en cours ».
     const t = turn;
@@ -133,7 +145,7 @@ function onStreamDone(cancelled) {
 function onStreamError(status, body) {
   if (!turn) return;
   const claudeDown = status === -1 || status === -3 /* Claude Code introuvable */ || status === 401 || status === 403 || status === 429 || status >= 500;
-  rollback(apiErrorText(status, body), claudeDown);
+  rollback(webHint(apiErrorText(status, body), body), claudeDown);
 }
 
 export { streamStep, onStreamError };

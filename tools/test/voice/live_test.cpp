@@ -8,7 +8,6 @@
 #include <cstdlib>
 
 namespace dock {
-void OpenPanelAsync() { std::printf("  [dock ouvert]\n"); }
 void SetListeningAsync(bool on) { std::printf("  [encoche %s]\n", on ? "ouverte" : "fermée"); }
 }
 namespace bridge { void PostToPage(std::string json) { std::printf("  -> %s\n", json.c_str()); } }

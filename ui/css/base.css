@@ -87,7 +87,7 @@ body.st-progress { --shell-w: 300px; --shell-h: 6px; --fl: 0px; }
 body.st-peek { --shell-w: 150px; --shell-h: 7px; --fl: 0px; }
 body.st-mini { --shell-w: var(--mini-w, 320px); --shell-h: var(--mini-h); }
 body.st-music { --shell-w: var(--mcard-w); --shell-h: var(--mcard-h); }
-body.st-listen { --shell-w: var(--listen-w); --shell-h: var(--mini-h); }
+body.st-listen { --shell-w: var(--listen-w); --shell-h: var(--listen-h); }
 body.st-bar { --shell-h: var(--bar-h); }
 
 /* Voile teinté pour la profondeur, seulement dans l'aperçu : dans le dock, il sortirait du verre arrondi */

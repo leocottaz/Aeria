@@ -28,4 +28,4 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 Le code de [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (v1.9.5, sous-module git `third_party/whisper.cpp`) est sous licence MIT, Copyright (c) 2023-2026 The ggml authors. Le texte complet est dans `third_party/whisper.cpp/LICENSE`.
 
-Le modèle `ggml-small-q5_1.bin` (non inclus dans le dépôt : l'application le télécharge depuis [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp)) est une conversion du modèle Whisper « small » d'OpenAI, sous licence MIT, Copyright (c) 2022 OpenAI.
+Les modèles `ggml-base-q5_1.bin`, `ggml-small-q5_1.bin` et `ggml-medium-q5_0.bin` (non inclus dans le dépôt : l'application télécharge celui que l'utilisateur choisit depuis [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp)) sont des conversions des modèles Whisper « base », « small » et « medium » d'OpenAI, sous licence MIT, Copyright (c) 2022 OpenAI.

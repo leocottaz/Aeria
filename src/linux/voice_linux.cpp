@@ -114,12 +114,12 @@ void StopCapture() {
 
 // ------------------------------------------------------------------ modèle
 
-std::string ModelPath() {
+std::string ModelPath(const std::string& file) {
     namespace fs = std::filesystem;
     fs::path dir = fs::path(util::DataDir()) / "models";
     std::error_code ec;
     fs::create_directories(dir, ec);
-    return (dir / "ggml-small-q5_1.bin").string();
+    return (dir / file).string();
 }
 
 namespace {
@@ -284,7 +284,6 @@ bool Download(const std::string& url, const std::string& dest, uint64_t maxBytes
     return ok;
 }
 
-void OpenDock() { dock::OpenPanelAsync(); }
 void ShowListening(bool on) { dock::SetListeningAsync(on); }
 
 } // namespace voice::platform

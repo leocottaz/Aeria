@@ -31,10 +31,18 @@
     <span class="pill-line" id="pillLine"></span>
   </button>
 
-  <!-- Encoche « j'écoute » (état « listen ») : « Aeria » a été entendu, la commande vocale attend la suite (js/features/voice.js) -->
+  <!-- Pilule « Aeria » (état « listen ») : « Aeria » a été entendu. Elle montre ce qu'on dit en direct, puis la
+       réponse (js/features/pill.js). Cliquer dessus ouvre la conversation. -->
   <div class="listen" id="listen" role="status">
-    <span class="listen-mic"><i data-icon="mic"></i></span>
-    <span id="listenText">Je t’écoute…</span>
+    <div class="listen-in" id="listenIn">
+      <div class="listen-head">
+        <span class="listen-mic"><i data-icon="mic" class="i-mic"></i><i data-icon="sparkles" class="i-ai"></i></span>
+        <span id="listenText">Je t’écoute…</span>
+        <button type="button" class="listen-x" id="listenClose" title="Fermer"><i data-icon="x"></i></button>
+      </div>
+      <p class="listen-said" id="listenSaid" hidden></p>
+      <div class="listen-answer md" id="listenAnswer" hidden></div>
+    </div>
   </div>
 
   <!-- Carte musique (état « music ») : descend seule quand le morceau change (js/features/music.js) -->
@@ -296,6 +304,7 @@
           <button type="button" data-page="appearance" title="Apparence"><i data-icon="palette"></i><span>Apparence</span></button>
           <button type="button" data-page="behavior" title="Comportement"><i data-icon="eye"></i><span>Comportement</span></button>
           <button type="button" data-page="music" title="Musique"><i data-icon="music"></i><span>Musique</span></button>
+          <button type="button" data-page="voice" title="Voix"><i data-icon="mic"></i><span>Voix</span></button>
           <button type="button" data-page="routines" title="Routines"><i data-icon="routine"></i><span>Routines</span></button>
           <button type="button" data-page="system" title="Système"><i data-icon="cpu"></i><span>Système</span></button>
         </nav>
@@ -361,6 +370,8 @@
               </details>
               <!-- Service compatible OpenAI : catégorie Gratuit (Gemini, Groq), catégorie ChatGPT (OpenAI), ou secours quand Claude est indisponible -->
               <label class="toggle-row" id="freeFallbackRow">Passer au modèle gratuit si Claude est indisponible<span class="toggle"><input type="checkbox" data-setting="freeFallback"><span></span></span></label>
+              <label class="toggle-row" id="webSearchRow">Chercher sur internet quand c’est utile<span class="toggle"><input type="checkbox" data-setting="webSearch"><span></span></span></label>
+              <p class="adv-note" id="webSearchNote">Claude lance une recherche web pour une actualité ou une info récente (abonnement Pro : compris ; clé API : facturé à la recherche, à activer dans la Console Anthropic).</p>
               <div id="freeFields">
                 <div class="field" id="freeServiceField">
                   <label>Modèle gratuit <span class="hint">tes messages partent chez ce service ; quotas limités</span></label>
@@ -449,18 +460,33 @@
               <div class="toggle-row">Ouvrir / fermer le dock<span><kbd>Ctrl</kbd> <kbd>Alt</kbd> <kbd>Espace</kbd></span></div>
             </div>
             <div class="card glass">
-              <h3>Voix</h3>
-              <label class="toggle-row"><span>Réveiller Aeria à la voix <span class="hint">dis « Aeria » : le dock s’ouvre et la phrase suivante lui est envoyée</span></span><span class="toggle"><input type="checkbox" data-setting="voiceWake"><span></span></span></label>
-              <p class="hint card-hint">Le micro est écouté en continu, mais tout reste sur ce PC : le son n’est ni enregistré ni envoyé, seules les phrases sont transcrites en mémoire par un modèle local.</p>
-              <div class="toggle-row"><span class="hint" id="voiceStatus">Désactivé.</span><button type="button" class="ghost" id="voiceDownload" hidden>Télécharger le modèle</button></div>
-              <span class="voice-bar" id="voiceBar" hidden><span id="voiceFill"></span></span>
-            </div>
-            <div class="card glass">
               <h3>Repli</h3>
               <div class="field">
                 <label>Délai avant de se replier <output data-for="hideDelay"></output></label>
                 <input type="range" min="200" max="3000" step="50" data-setting="hideDelay">
               </div>
+            </div>
+          </div>
+
+          <div class="set-page" data-page="voice">
+            <div class="card glass">
+              <h3>Réveil à la voix</h3>
+              <label class="toggle-row"><span>Réveiller Aeria à la voix <span class="hint">dis « Aeria » : le dock s’ouvre et la phrase suivante lui est envoyée</span></span><span class="toggle"><input type="checkbox" data-setting="voiceWake"><span></span></span></label>
+              <p class="hint card-hint">Le micro est écouté en continu, mais tout reste sur ce PC : le son n’est ni enregistré ni envoyé, seules les phrases sont transcrites en mémoire par un modèle local.</p>
+            </div>
+            <div class="card glass">
+              <h3>Reconnaissance</h3>
+              <div class="field">
+                <label>Modèle de reconnaissance</label>
+                <div class="seg" data-setting="voiceModel">
+                  <button type="button" data-v="base">Base</button>
+                  <button type="button" data-v="small">Small</button>
+                  <button type="button" data-v="medium">Medium</button>
+                </div>
+                <p class="hint card-hint" id="voiceModelInfo"></p>
+              </div>
+              <div class="toggle-row"><span class="hint" id="voiceStatus">Désactivé.</span><span class="voice-actions"><button type="button" class="ghost" id="voiceDownload" hidden>Télécharger</button><button type="button" class="ghost" id="voiceDelete" hidden>Supprimer</button></span></div>
+              <span class="voice-bar" id="voiceBar" hidden><span id="voiceFill"></span></span>
             </div>
           </div>
 

@@ -25,9 +25,26 @@
 namespace voice {
 namespace {
 
-constexpr char kModelUrl[] = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin";
-constexpr char kModelSha256[] = "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb";
-constexpr uint64_t kModelMaxBytes = 260ull * 1024 * 1024;
+// Modèles proposés (conversions quantifiées de whisper.cpp, Hugging Face ggerganov/whisper.cpp). Aucun n'est livré :
+// l'utilisateur choisit et télécharge le sien. Taille et SHA-256 sont figés : un fichier différent est refusé.
+struct ModelInfo {
+    const char* id;
+    const char* file;
+    const char* sha256;
+    uint64_t bytes;
+};
+constexpr ModelInfo kModels[] = {
+    {"base", "ggml-base-q5_1.bin", "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898", 59707625},
+    {"small", "ggml-small-q5_1.bin", "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb", 190085487},
+    {"medium", "ggml-medium-q5_0.bin", "19fea4b380c3a618ec4723c3eef2eb785ffba0d0538cf43f8f235e7b3b34220f", 539212467},
+};
+constexpr char kModelUrlBase[] = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/";
+constexpr char kDefaultModel[] = "small";
+
+const ModelInfo* FindModel(const std::string& id) {
+    for (const auto& m : kModels) if (id == m.id) return &m;
+    return nullptr;
+}
 
 constexpr int kRate = 16000;
 constexpr int kFrame = kRate / 50;            // 20 ms
@@ -40,10 +57,41 @@ constexpr int kEndAwake = 55;                 // 1,1 s pendant une commande (on 
 constexpr size_t kMaxSamples = 12 * kRate;    // une phrase ne dépasse pas 12 s
 constexpr size_t kMinSamples = 11 * kRate / 10; // whisper refuse moins d'une seconde : on complète de silence
 constexpr auto kAwakeWindow = std::chrono::seconds(8); // temps laissé pour dicter après « Aeria »
+constexpr size_t kWakeDraftSamples = kRate;            // au repos, brouillon pour repérer « Aeria » dès 1 s de phrase
+constexpr size_t kDraftStep = kRate / 2;               // à l'écoute, nouveau brouillon dès 0,5 s de voix en plus
+constexpr auto kDraftEvery = std::chrono::milliseconds(300); // pause minimale entre deux brouillons
 
 bool Debug() {
     static const bool on = std::getenv("AERIA_DEBUG") != nullptr;
     return on;
+}
+
+// ------------------------------------------------------------------ modèle choisi
+
+std::mutex g_modelMutex;
+const ModelInfo* g_model = FindModel(kDefaultModel); // modèle choisi (réglage voiceModel)
+const ModelInfo* g_loaded = nullptr;                // modèle chargé par le worker en cours
+std::string g_downloadId;                           // modèle en cours de téléchargement
+
+const ModelInfo& Selected() {
+    std::lock_guard<std::mutex> lock(g_modelMutex);
+    return *g_model;
+}
+std::string PathOf(const ModelInfo& m) { return platform::ModelPath(m.file); }
+bool Present(const ModelInfo& m) {
+    std::error_code ec;
+    return std::filesystem::exists(PathOf(m), ec);
+}
+// ,"models":["base","small"] : les modèles déjà sur ce PC (la page y choisit, voir js/features/voice.js)
+std::string ModelsJson() {
+    std::string j = ",\"models\":[";
+    bool first = true;
+    for (const auto& m : kModels) {
+        if (!Present(m)) continue;
+        j += std::string(first ? "" : ",") + "\"" + m.id + "\"";
+        first = false;
+    }
+    return j + "]";
 }
 
 // ------------------------------------------------------------------ état partagé avec la page
@@ -53,14 +101,20 @@ std::string g_lastState; // dernier message d'état, renvoyé par « status »
 std::atomic<bool> g_notch{false}; // l'encoche « j'écoute » du dock est ouverte
 
 void Post(const char* state, int pct = -1, const std::string& msg = "", const std::string& text = "") {
-    // L'encoche suit l'écoute : ouverte tant qu'on attend ou transcrit la commande, fermée sinon.
+    // L'encoche suit l'écoute : ouverte tant qu'on attend ou transcrit la commande, fermée sinon (« partial » :
+    // texte en direct pendant l'écoute, il ne change rien).
     const std::string name = state;
     const bool listening = name == "awake" || name == "working";
-    if (g_notch.exchange(listening) != listening) platform::ShowListening(listening);
+    if (name != "partial" && g_notch.exchange(listening) != listening) platform::ShowListening(listening);
     std::string j = std::string("{\"t\":\"voice\",\"state\":\"") + state + "\"";
     if (pct >= 0) j += ",\"pct\":" + std::to_string(pct);
     if (!msg.empty()) j += ",\"msg\":" + util::Json(msg);
     if (!text.empty()) j += ",\"text\":" + util::Json(text);
+    j += ModelsJson();
+    if (name == "downloading") {
+        std::lock_guard<std::mutex> lock(g_modelMutex);
+        j += ",\"model\":\"" + g_downloadId + "\"";
+    }
     j += "}";
     if (text.empty()) {
         std::lock_guard<std::mutex> lock(g_stateMutex);
@@ -80,7 +134,16 @@ public:
     double Floor() const { return floor_; }
     bool Speaking() const { return speaking_; } // une phrase est en cours (lu par le worker, écrit par le thread du micro)
 
+    // Copie de la phrase en cours (même niveau que la phrase finale) pour la transcription en direct ;
+    // vide tant que personne ne parle.
+    std::vector<float> Snapshot() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!speaking_ || voiced_ < kMinVoiced) return {};
+        return ToFloat(utt_);
+    }
+
     void Feed(const int16_t* s, size_t n, int endFrames) {
+        std::lock_guard<std::mutex> lock(mutex_);
         for (size_t i = 0; i < n; i++) {
             frame_[fill_++] = s[i];
             if (fill_ == kFrame) {
@@ -131,15 +194,20 @@ private:
         silence_ = 0;
         if (Debug()) std::fprintf(stderr, "[voice] phrase finie : %zu ms, %d images de voix, plancher %.0f%s\n", utt.size() / 16, voiced, floor_, voiced < kMinVoiced ? " (trop court : jetée)" : "");
         if (voiced < kMinVoiced) return;
-        // Niveau : les micros d'ordinateur portable sont souvent faibles, whisper préfère un signal franc.
+        emit_(ToFloat(utt));
+    }
+
+    // Niveau : les micros d'ordinateur portable sont souvent faibles, whisper préfère un signal franc.
+    static std::vector<float> ToFloat(const std::vector<int16_t>& utt) {
         int peak = 1;
         for (int16_t v : utt) peak = std::max(peak, std::abs((int)v));
         const float gain = std::min(8.0f, 0.9f * 32768.0f / peak);
         std::vector<float> pcm(utt.size());
         for (size_t i = 0; i < utt.size(); i++) pcm[i] = std::clamp(utt[i] * gain / 32768.0f, -1.0f, 1.0f);
-        emit_(std::move(pcm));
+        return pcm;
     }
 
+    std::mutex mutex_; // le thread du micro écrit la phrase en cours, le worker en prend des copies (Snapshot)
     Emit emit_;
     int16_t frame_[kFrame]{};
     int fill_ = 0;
@@ -230,14 +298,18 @@ bool IsNoise(const std::string& text) {
 // ------------------------------------------------------------------ transcription
 
 std::atomic<bool> g_stop{false};
+std::atomic<bool> g_partialRunning{false}; // une transcription en direct tourne : la phrase finale la coupe (voir Enqueue)
+std::atomic<bool> g_abortPartial{false};
 
 void QuietLog(ggml_log_level, const char*, void*) {}
 
-// precise : une commande à comprendre (recherche en faisceau, plus lente) ; sinon on guette seulement « Aeria ».
-std::string Transcribe(whisper_context* ctx, std::vector<float>& pcm, bool precise) {
+// precise : une commande à comprendre (vocabulaire de commandes) ; sinon on guette seulement « Aeria ».
+// beam : recherche en faisceau, plus juste mais plus lente (la phrase finale) ; sinon glouton (le direct).
+// draft : brouillon en direct, abandonné si la phrase finale arrive.
+std::string Transcribe(whisper_context* ctx, std::vector<float>& pcm, bool precise, bool beam, bool draft = false) {
     if (pcm.size() < kMinSamples) pcm.resize(kMinSamples, 0.0f);
-    whisper_full_params p = whisper_full_default_params(precise ? WHISPER_SAMPLING_BEAM_SEARCH : WHISPER_SAMPLING_GREEDY);
-    if (precise) p.beam_search.beam_size = 4;
+    whisper_full_params p = whisper_full_default_params(beam ? WHISPER_SAMPLING_BEAM_SEARCH : WHISPER_SAMPLING_GREEDY);
+    if (beam) p.beam_search.beam_size = 4;
     p.language = "fr";
     p.translate = false;
     p.n_threads = (int)std::clamp<unsigned>(std::thread::hardware_concurrency() / 2, 2, 6);
@@ -251,7 +323,9 @@ std::string Transcribe(whisper_context* ctx, std::vector<float>& pcm, bool preci
     // (« minuteur » était compris « mais un minuteur » sans).
     p.initial_prompt = precise ? "Aeria, mets un minuteur de dix minutes. Rappelle-moi d'appeler Paul demain à quatorze heures. Ajoute une tâche. Quelle heure est-il ?"
                                : "Aeria.";
-    p.abort_callback = [](void*) { return g_stop.load(); };
+    bool abortable = draft; // seul un brouillon est abandonné quand la phrase finale arrive
+    p.abort_callback = [](void* data) { return g_stop.load() || (*static_cast<bool*>(data) && g_abortPartial.load()); };
+    p.abort_callback_user_data = &abortable;
     if (whisper_full(ctx, p, pcm.data(), (int)pcm.size()) != 0) return {};
     std::string text;
     for (int i = 0, n = whisper_full_n_segments(ctx); i < n; i++) {
@@ -275,12 +349,13 @@ std::deque<std::vector<float>> g_queue;
 std::atomic<bool> g_awake{false};
 std::atomic<long long> g_listenRequest{0}; // « listen » de la page : le worker passe en écoute
 std::atomic<long long> g_cancelRequest{0}; // « cancel » de la page : le worker arrête d'écouter
-std::atomic<bool> g_buttonListen{false};  // l'écoute vient d'un bouton micro : la page dicte dans son champ, le panneau ne s'ouvre pas
 std::atomic<bool> g_oneShot{false};        // bouton micro sans « Aeria » activé : le micro ne reste ouvert que le temps d'une phrase
+std::atomic<bool> g_earlyWake{false};      // « Aeria » repéré dans la transcription en direct, avant la fin de la phrase
 
 void Enqueue(std::vector<float>&& pcm) {
     {
         std::lock_guard<std::mutex> lock(g_queueMutex);
+        if (g_partialRunning) g_abortPartial = true; // la phrase finale est prête : on abandonne le brouillon
         if (g_queue.size() >= 3) g_queue.pop_front(); // le worker est en retard : on garde le plus récent
         g_queue.push_back(std::move(pcm));
     }
@@ -288,9 +363,11 @@ void Enqueue(std::vector<float>&& pcm) {
 }
 
 // Un texte à envoyer à l'assistante : la page le pose dans la conversation.
+// C'est la page qui décide quoi en faire : l'écrire dans le champ d'un bouton micro, l'afficher dans la pilule
+// (dock rangé) ou ouvrir le panneau (dock déjà ouvert).
 void Deliver(const std::string& text) {
     g_awake = false;
-    if (!g_buttonListen.exchange(false)) platform::OpenDock(); // avant la fin de l'écoute : le panneau prend la place de l'encoche
+    g_earlyWake = false;
     Post("heard", -1, "", text);
     Post("idle");
 }
@@ -300,8 +377,19 @@ void Handle(const std::string& text, std::chrono::steady_clock::time_point& awak
     if (IsNoise(text)) return;
     std::string rest;
     const bool named = FindWakeWord(text, rest);
-    if (g_awake) { // « Aeria, mets un minuteur » dit pendant l'écoute : on retire le nom
-        Deliver(named && !IsNoise(rest) ? rest : text);
+    if (g_awake) {
+        // « Aeria » avait été repéré avant la fin de la phrase : la phrase finale le confirme (ou non).
+        if (g_earlyWake.exchange(false)) {
+            if (!named) { // fausse alerte du direct : on se rendort sans rien envoyer
+                g_awake = false;
+                Post("idle");
+                return;
+            }
+            if (IsNoise(rest)) return; // « Aeria » seul : on attend la commande
+            Deliver(rest);
+            return;
+        }
+        Deliver(named && !IsNoise(rest) ? rest : text); // « Aeria, mets un minuteur » dit pendant l'écoute : on retire le nom
         return;
     }
     if (!named) return;
@@ -319,7 +407,12 @@ void Worker() {
     whisper_log_set(QuietLog, nullptr);
     whisper_context_params cp = whisper_context_default_params();
     cp.use_gpu = false;
-    whisper_context* ctx = whisper_init_from_file_with_params(platform::ModelPath().c_str(), cp);
+    const ModelInfo& model = Selected();
+    {
+        std::lock_guard<std::mutex> lock(g_modelMutex);
+        g_loaded = &model;
+    }
+    whisper_context* ctx = whisper_init_from_file_with_params(PathOf(model).c_str(), cp);
     if (!ctx) {
         Post("error", -1, "Modèle vocal illisible : télécharge-le de nouveau.");
         g_running = false;
@@ -374,6 +467,10 @@ void Worker() {
         Post("idle");
     }
     long long seenListen = g_listenRequest, seenCancel = g_cancelRequest;
+    bool wakeChecked = false;     // brouillon de repérage de « Aeria » déjà fait pour la phrase en cours
+    size_t draftLen = 0;          // taille de la phrase au dernier brouillon
+    std::string draftShown;       // dernier texte en direct envoyé à la page
+    auto lastDraft = std::chrono::steady_clock::now();
     while (!g_stop && !(g_oneShot && !g_awake)) {
         std::vector<float> pcm;
         {
@@ -390,13 +487,14 @@ void Worker() {
             seenListen = g_listenRequest;
             if (g_awake) {
                 g_awake = false;
-                g_buttonListen = false;
+                g_earlyWake = false;
                 Post("idle");
                 continue; // la phrase en cours d'écoute est jetée
             }
         }
         if (g_listenRequest != seenListen) {
             seenListen = g_listenRequest;
+            g_earlyWake = false;
             g_awake = true;
             awakeUntil = std::chrono::steady_clock::now() + kAwakeWindow;
             Post("awake");
@@ -406,16 +504,53 @@ void Worker() {
         if (g_awake && seg.Speaking()) awakeUntil = std::max(awakeUntil, std::chrono::steady_clock::now() + std::chrono::seconds(3));
         if (g_awake && std::chrono::steady_clock::now() > awakeUntil && pcm.empty()) {
             g_awake = false;
-            g_buttonListen = false;
+            g_earlyWake = false;
             Post("idle");
+        }
+        // Transcription en direct : pendant qu'on parle, la phrase en cours est retranscrite en brouillon.
+        // Au repos, une seule passe par phrase, pour repérer « Aeria » sans attendre la fin ; à l'écoute, le texte
+        // affiché suit la voix (la phrase finale, plus soignée, a le dernier mot).
+        if (!seg.Speaking()) {
+            wakeChecked = false;
+            draftLen = 0;
+            draftShown.clear();
+        } else if (pcm.empty() && std::chrono::steady_clock::now() - lastDraft >= kDraftEvery) {
+            std::vector<float> snap = seg.Snapshot();
+            const bool wakeDraft = !g_awake && !wakeChecked && snap.size() >= kWakeDraftSamples;
+            const bool textDraft = g_awake && snap.size() >= draftLen + kDraftStep;
+            if (wakeDraft || textDraft) {
+                wakeChecked = true;
+                draftLen = snap.size();
+                g_abortPartial = false;
+                g_partialRunning = true;
+                std::string draft = Transcribe(ctx, snap, g_awake, false, true);
+                g_partialRunning = false;
+                g_abortPartial = false;
+                lastDraft = std::chrono::steady_clock::now();
+                if (Debug()) std::fprintf(stderr, "[voice] brouillon (%zu ms) : « %s »\n", draftLen / 16, draft.c_str());
+                std::string rest;
+                const bool named = FindWakeWord(draft, rest);
+                if (wakeDraft && named) { // « Aeria » est déjà dit : l'encoche s'ouvre sans attendre la fin de la phrase
+                    g_awake = true;
+                    g_earlyWake = true;
+                    awakeUntil = std::chrono::steady_clock::now() + kAwakeWindow;
+                    Post("awake");
+                }
+                const std::string shown = named ? rest : draft;
+                if (g_awake && !IsNoise(shown) && shown != draftShown) {
+                    draftShown = shown;
+                    Post("partial", -1, "", shown);
+                }
+            }
         }
         if (pcm.empty()) continue;
         if (g_awake) Post("working");
-        std::string text = Transcribe(ctx, pcm, g_awake);
-        if (Debug()) std::fprintf(stderr, "[voice] transcrit : « %s »\n", text.c_str());
+        const auto transcribeStart = std::chrono::steady_clock::now();
+        std::string text = Transcribe(ctx, pcm, g_awake, g_awake);
+        if (Debug()) std::fprintf(stderr, "[voice] transcrit en %lld ms : « %s »\n", (long long)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - transcribeStart).count(), text.c_str());
         std::string rest;
         // « Aeria, mets un minuteur… » d'une traite : le nom est trouvé, on refait la commande avec soin.
-        if (!g_awake && FindWakeWord(text, rest) && !IsNoise(rest)) text = Transcribe(ctx, pcm, true);
+        if (!g_awake && FindWakeWord(text, rest) && !IsNoise(rest)) text = Transcribe(ctx, pcm, true, true);
         Handle(text, awakeUntil);
         if (g_awake) { // rien d'utilisable : on laisse le reste du délai
             awakeUntil = std::max(awakeUntil, std::chrono::steady_clock::now() + std::chrono::seconds(3));
@@ -425,7 +560,12 @@ void Worker() {
     if (Debug()) std::fprintf(stderr, "[voice] micro fermé\n");
     platform::StopCapture();
     whisper_free(ctx);
+    {
+        std::lock_guard<std::mutex> lock(g_modelMutex);
+        g_loaded = nullptr;
+    }
     g_awake = false;
+    g_earlyWake = false;
     {
         std::lock_guard<std::mutex> lock(g_queueMutex);
         g_queue.clear();
@@ -434,10 +574,7 @@ void Worker() {
     if (g_oneShot.exchange(false) && !g_stop && !g_want) Post("off"); // la phrase du bouton micro est passée : micro refermé
 }
 
-bool ModelPresent() {
-    std::error_code ec;
-    return std::filesystem::exists(platform::ModelPath(), ec);
-}
+bool ModelPresent() { return Present(Selected()); }
 
 void StartLocked() {
     if (g_running || g_downloading) return;
@@ -458,14 +595,18 @@ void StopLocked() {
     g_running = false;
 }
 
-void DownloadModel() {
+void DownloadModel(const ModelInfo& model) {
     if (g_downloading.exchange(true)) return;
-    std::thread([] {
-        const std::string dest = platform::ModelPath();
+    {
+        std::lock_guard<std::mutex> lock(g_modelMutex);
+        g_downloadId = model.id;
+    }
+    std::thread([&model] {
+        const std::string dest = PathOf(model);
         std::string error;
         Post("downloading", 0);
         int last = -1;
-        bool ok = platform::Download(kModelUrl, dest, kModelMaxBytes, kModelSha256,
+        bool ok = platform::Download(std::string(kModelUrlBase) + model.file, dest, model.bytes + 4ull * 1024 * 1024, model.sha256,
                                      [&](int pct) {
                                          if (pct != last) {
                                              last = pct;
@@ -477,9 +618,11 @@ void DownloadModel() {
         std::lock_guard<std::mutex> lock(g_lifecycle);
         if (!ok) {
             Post("error", -1, error.empty() ? "Téléchargement impossible." : error);
-        } else if (g_want) {
+        } else if (g_want && !g_running) {
             g_oneShot = false;
             StartLocked();
+        } else if (g_running) {
+            Post(g_awake ? "awake" : "idle"); // une autre écoute tourne : on rafraîchit seulement la liste des modèles
         } else {
             Post("off");
         }
@@ -540,6 +683,25 @@ void Apply(bool enabled) {
     }
 }
 
+void SetModel(const std::string& id) {
+    const ModelInfo* model = FindModel(id);
+    if (!model) return;
+    std::lock_guard<std::mutex> lock(g_lifecycle);
+    {
+        std::lock_guard<std::mutex> modelLock(g_modelMutex);
+        if (g_model == model) return;
+        g_model = model;
+    }
+    if (g_running) {
+        StopLocked(); // le micro est rechargé avec le nouveau modèle
+        g_oneShot = false;
+        if (g_want) StartLocked();
+        else Post("off");
+    } else if (g_want) {
+        StartLocked();
+    }
+}
+
 void Shutdown() {
     std::lock_guard<std::mutex> lock(g_lifecycle);
     g_want = false;
@@ -547,7 +709,10 @@ void Shutdown() {
     StopLocked(); // joint aussi un worker déjà fini de lui-même (bouton micro) : sinon std::terminate à la sortie
 }
 
-void Command(const std::string& arg) {
+void Command(const std::string& command) {
+    const size_t colon = command.find(':'); // « download:small », « delete:base »
+    const std::string arg = command.substr(0, colon);
+    const std::string param = colon == std::string::npos ? "" : command.substr(colon + 1);
     if (arg == "status") {
         std::string state;
         {
@@ -555,20 +720,35 @@ void Command(const std::string& arg) {
             state = g_lastState;
         }
         if (g_downloading) return; // la progression arrive d'elle-même
-        if (!g_running) state = std::string("{\"t\":\"voice\",\"state\":\"") + (ModelPresent() ? "off" : "nomodel") + "\"}";
+        if (!g_running) state = std::string("{\"t\":\"voice\",\"state\":\"") + (ModelPresent() ? "off" : "nomodel") + "\"" + ModelsJson() + "}";
         if (!state.empty()) bridge::PostToPage(std::move(state));
     } else if (arg == "download") {
-        DownloadModel();
+        const ModelInfo* model = param.empty() ? &Selected() : FindModel(param);
+        if (model) DownloadModel(*model);
+    } else if (arg == "delete") {
+        const ModelInfo* model = FindModel(param);
+        if (!model) return;
+        std::lock_guard<std::mutex> lock(g_lifecycle);
+        bool inUse = false;
+        {
+            std::lock_guard<std::mutex> modelLock(g_modelMutex);
+            if (g_downloading && g_downloadId == model->id) return; // en cours de téléchargement : on ne touche pas au fichier
+            inUse = g_running && g_loaded == model;
+        }
+        if (inUse) StopLocked(); // le micro l'utilise : on l'arrête d'abord
+        std::error_code ec;
+        std::filesystem::remove(PathOf(*model), ec);
+        if (g_want && !g_running && !ModelPresent()) Post("nomodel");
+        else Post(g_running ? (g_awake ? "awake" : "idle") : "off");
     } else if (arg == "listen") {
         std::lock_guard<std::mutex> lock(g_lifecycle);
-        g_buttonListen = true;
         if (g_running) {
             g_listenRequest++;
             g_queueCv.notify_all();
         } else if (!g_downloading) { // bouton micro avec « Aeria » désactivé : micro ouvert le temps d'une phrase
             g_oneShot = !g_want;
             StartLocked();
-            if (!g_running) g_oneShot = g_buttonListen = false; // pas de modèle : StartLocked a déjà prévenu la page
+            if (!g_running) g_oneShot = false; // pas de modèle : StartLocked a déjà prévenu la page
         }
     } else if (arg == "cancel") {
         g_cancelRequest++;

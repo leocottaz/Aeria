@@ -21,9 +21,26 @@ const newConvo = () => ({ id: uid(), backend: settings.backend, messages: [], cr
 
 let convo = store.get('convo', null) || newConvo();
 // Images et PDF ne sont pas gardés dans le stockage local (voir forStorage dans attach.js).
-const saveConvo = () => store.set('convo', { ...convo, messages: convo.messages.map(forStorage) });
+// Les résultats de recherche de l'API (contenu chiffré, volumineux) et les citations ne sont pas gardés non plus.
+const slim = (m) => (m.role === 'assistant' && m.content.some((c) => c.type === 'server_tool_use' || c.type === 'web_search_tool_result' || c.citations)
+  ? { ...m, content: m.content.filter((c) => c.type !== 'server_tool_use' && c.type !== 'web_search_tool_result').map(({ citations, ...c }) => c) }
+  : m);
+const saveConvo = () => store.set('convo', { ...convo, messages: convo.messages.map((m) => forStorage(slim(m))) });
 let turn = null;      // tour en cours : { reqId, blocks, stop, startLen, userText, loops, ... }
 let chatNotice = null;
+
+// La pilule de la commande vocale (js/features/pill.js) suit la réponse : texte de l'assistant depuis le dernier
+// message de l'utilisateur (blocs déjà reçus + tour en cours), sans les balises d'actions.
+let progressHook = null;
+const onChatProgress = (fn) => { progressHook = fn; };
+const isBusy = () => !!turn;
+function answerText() {
+  let start = 0;
+  convo.messages.forEach((m, i) => { if (m.role === 'user' && m.content.some((c) => c.type === 'text')) start = i + 1; });
+  const blocks = convo.messages.slice(start).filter((m) => m.role === 'assistant').flatMap((m) => m.content);
+  if (turn) blocks.push(...turn.blocks);
+  return stripActions(blocks.filter((b) => b.type === 'text').map((b) => b.text || '').join('\n\n'), !!turn).trim();
+}
 
 // Secours gratuit possible : activé dans les réglages, clé du service enregistrée, et Claude choisi.
 const canFallback = () => settings.category === 'claude' && settings.freeFallback && freeReady();
@@ -90,7 +107,7 @@ function handleEvent(ev) {
       break;
     case 'content_block_start': {
       const b = structuredClone(ev.content_block);
-      if (b.type === 'tool_use') b._json = '';
+      if (b.type === 'tool_use' || b.type === 'server_tool_use') b._json = '';
       blocks[idx] = b;
       break;
     }
@@ -107,7 +124,7 @@ function handleEvent(ev) {
     }
     case 'content_block_stop': {
       const b = blocks[idx];
-      if (b?.type === 'tool_use') {
+      if (b?.type === 'tool_use' || b?.type === 'server_tool_use') {
         try { b.input = b._json.trim() ? JSON.parse(b._json) : {}; } catch { b.input = {}; b._invalid = true; }
       }
       if (b) b._complete = true;
@@ -143,6 +160,7 @@ function endTurn() {
   saveConvo();
   renderChat();
   scrollChat(false);
+  progressHook?.({ text: answerText(), done: true, error: chatNotice });
 }
 
 function setStreaming(on) {
@@ -196,6 +214,10 @@ function toolHTML(b, res, live) {
     ic = 'file';
     title = state('Fichier ouvert', 'Ouverture…', 'Fichier non ouvert');
     detail = inp.number ? `n° ${inp.number}` : '';
+  } else if (b.name === 'open_url') {
+    ic = 'globe';
+    title = state('Page ouverte', 'Ouverture de la page…', 'Page non ouverte');
+    detail = inp.url || '';
   } else if (b.name === 'run_routine') {
     ic = 'routine';
     title = state('Routine lancée', 'Lancement de la routine…', 'Routine non lancée');
@@ -220,6 +242,18 @@ function foundHTML(title, detail, files) {
     <div class="found-list">${rows}</div></div></div>`;
 }
 
+// Recherche sur internet : outil de Claude Code (tool_use « WebSearch », mode Pro) ou outil serveur de l'API
+// (server_tool_use + web_search_tool_result). Ni l'un ni l'autre ne passe par execTool.
+function searchHTML(b, blocks, live) {
+  const result = blocks.find((x) => x.type === 'web_search_tool_result' && x.tool_use_id === b.id);
+  const failed = result && !Array.isArray(result.content);
+  const done = !live || !!result || (b.type === 'tool_use' && blocks.indexOf(b) < blocks.length - 1); // Claude Code n'envoie pas le résultat : la suite le prouve
+  const n = Array.isArray(result?.content) ? result.content.length : 0;
+  const title = failed ? 'Recherche impossible' : done ? (n ? `Recherche sur internet · ${n} résultat${n > 1 ? 's' : ''}` : 'Recherche sur internet') : 'Recherche sur internet…';
+  const query = b.input?.query || '';
+  return `<div class="tool ${failed ? 'err' : ''}">${icon('globe')}<div><b>${title}</b>${query ? `<span>${esc(query)}</span>` : ''}</div>${done && !failed ? icon('check', 'ok') : ''}</div>`;
+}
+
 function groupBlocksHTML(blocks, results, live) {
   let html = '';
   const visible = blocks.filter(Boolean);
@@ -232,6 +266,8 @@ function groupBlocksHTML(blocks, results, live) {
       if (!shown.trim()) continue;
       hasText = true;
       html += `<div class="md${live && b === last ? ' streaming' : ''}">${md(shown)}</div>`;
+    } else if (b.type === 'server_tool_use' || (b.type === 'tool_use' && b.name === 'WebSearch')) {
+      html += searchHTML(b, visible, live);
     } else if (b.type === 'tool_use') html += toolHTML(b, results[b.id], live);
     else if (b.type === 'fallback') html += `<div class="note-fallback">Réponse poursuivie par ${esc(b.to?.model || 'un autre modèle')}</div>`;
   }
@@ -313,6 +349,7 @@ function scheduleLive() {
     const stick = isNearBottom();
     el.innerHTML = viaHTML(turn.via) + groupBlocksHTML([...liveCommitted, ...turn.blocks], liveResults, true);
     if (stick) scrollChat(false);
+    progressHook?.({ text: answerText(), done: false });
   });
 }
 
@@ -373,6 +410,6 @@ function setupChat() {
 }
 
 export {
-  convo, turn, sendChat, saveConvo, handleEvent, rollback, endTurn, setStreaming,
+  convo, turn, sendChat, onChatProgress, isBusy, saveConvo, handleEvent, rollback, endTurn, setStreaming,
   renderChat, scheduleLive, scrollChat, focusComposer, setupChat,
 };

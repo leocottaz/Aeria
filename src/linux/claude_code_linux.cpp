@@ -151,17 +151,20 @@ void RunChat(std::shared_ptr<ProcJob> pj, std::vector<std::string> f) {
     if (exe.empty()) {
         bridge::PostToPage("{\"t\":\"error\",\"id\":" + id + ",\"status\":-3,\"body\":\"Claude Code est introuvable.\"}");
     } else {
-        // Aucun outil (fichiers, commandes, MCP) : Claude Code sert uniquement à discuter.
+        // Aucun outil (fichiers, commandes, MCP) : Claude Code sert uniquement à discuter. Seule exception, voulue par la
+        // page (champ « outils » = web) : la recherche sur internet, sans lecture de page ni accès au PC.
+        const bool web = f[4] == "web";
         std::vector<std::string> args = {"-p", "--output-format", "stream-json", "--verbose",
-                                         "--include-partial-messages", "--tools", "", "--disallowedTools",
+                                         "--include-partial-messages", "--tools", web ? "WebSearch" : "", "--disallowedTools",
                                          "mcp__*", "--strict-mcp-config", "--disable-slash-commands",
-                                         "--system-prompt", f[4]};
+                                         "--system-prompt", f[5]};
+        if (web) args.insert(args.end(), {"--allowedTools", "WebSearch"});
         if (!f[1].empty() && f[1] != "default") args.insert(args.end(), {"--model", f[1]});
         if (!f[2].empty()) args.insert(args.end(), {"--effort", f[2]});
         if (!f[3].empty()) args.insert(args.end(), {"--resume", f[3]});
 
         std::string pending, err;
-        int code = RunProcess(*pj, exe, args, f[5], [&](const char* d, size_t n) {
+        int code = RunProcess(*pj, exe, args, f[6], [&](const char* d, size_t n) {
             pending.append(d, n);
             size_t cut = pending.rfind('\n');
             if (cut != std::string::npos) {
@@ -181,8 +184,8 @@ void RunChat(std::shared_ptr<ProcJob> pj, std::vector<std::string> f) {
 } // namespace
 
 void StartChat(const std::string& payload) {
-    auto f = util::Split(payload, '\x1f', 6);
-    if (f.size() != 6 || f[0].empty()) return;
+    auto f = util::Split(payload, '\x1f', 7);
+    if (f.size() != 7 || f[0].empty()) return;
     auto pj = std::make_shared<ProcJob>();
     pj->id = f[0];
     {

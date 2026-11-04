@@ -38,6 +38,7 @@ constexpr int kTabW = 150, kTabH = 7;
 constexpr int kStripW = 300, kStripH = 6;
 constexpr int kMiniH = 40;
 constexpr int kMusicH = 76;
+constexpr int kPillMaxW = 520, kPillMaxH = 300; // taille maximale de la pilule (voir SetPill)
 constexpr int kListenW = 190; // encoche « j'écoute » ; hauteur = kMiniH
 constexpr int kExtra = 40;
 
@@ -92,7 +93,11 @@ bool g_releaseHoldOnEnter = false;
 bool g_waitLeave = false;
 int g_miniW = 0;
 int g_musicW = 380;
-bool g_listening = false; // la commande vocale écoute : l'encoche reste là
+bool g_listening = false; // la commande vocale écoute : la pilule reste là
+bool g_pillKeep = false;  // la page garde la pilule ouverte (la réponse s'y affiche)
+int g_pillW = kListenW, g_pillH = kMiniH; // taille de la pilule voulue par la page (DIP)
+gint64 g_closeAt = 0;  // fermeture différée quand la voix a fini d'écouter : la page a le temps de garder la pilule
+gint64 g_pillSince = 0; // dernière demande de la voix ou de la page (garde-fou)
 guint g_animSource = 0;
 KeyCode g_hotkeyCode = 0;
 bool g_xwayland = false; // session Wayland : on tourne dans XWayland (voir « souris sous XWayland »)
@@ -209,7 +214,7 @@ Rect TargetRect(State s) {
         case State::Peek: w = kTabW; h = kInset + kTabH; break;
         case State::Mini: w = g_miniW; h = kInset + kMiniH; break;
         case State::Music: w = g_musicW; h = kInset + kMusicH; break;
-        case State::Listen: w = kListenW; h = kInset + kMiniH; break;
+        case State::Listen: w = g_pillW; h = kInset + g_pillH; break;
         case State::Bar: h = kInset + kBarH; break;
         case State::Panel: h = kInset + kBarH + g_cfg.panelH; break;
     }
@@ -449,7 +454,16 @@ gboolean Poll(gpointer) {
             else if (now - g_progressStart >= g_cfg.revealDelay) SetState(State::Bar);
             break;
         case State::Listen:
-            if (!g_listening) SetState(RestState()); // l'écoute est finie (la voix envoie sa fin, ou le micro s'arrête)
+            if (wantsReveal) { // la souris touche le bord haut : le dock s'ouvre (la réponse continue dans la conversation)
+                SetState(State::Bar);
+                break;
+            }
+            // Rangée quand ni la voix ni la page ne la veulent. Garde-fou : une pilule oubliée par une page figée
+            // ne reste pas plus de 2 minutes.
+            if ((!g_listening && !g_pillKeep && now >= g_closeAt) || now - g_pillSince > 120000) {
+                g_listening = g_pillKeep = false;
+                SetState(RestState());
+            }
             break;
         case State::Music:
         case State::Bar:
@@ -479,15 +493,25 @@ gboolean Poll(gpointer) {
     return G_SOURCE_CONTINUE;
 }
 
-// « Aeria » entendu : une encoche s'ouvre tant que la voix écoute. Barre ou panneau ouverts, c'est leur champ
-// « Demander » qui s'éclaire (js/features/voice.js) : on les empêche seulement de se replier pendant l'écoute.
+// « Aeria » entendu : une pilule s'ouvre au sommet du dock rangé (js/features/pill.js : ce qu'on dit, puis la réponse).
+// Barre ou panneau ouverts, c'est leur champ « Demander » qui s'éclaire (js/features/voice.js) : on les empêche
+// seulement de se replier pendant l'écoute.
 void SetListening(bool on) {
     g_listening = on;
+    g_pillSince = NowMs();
     if (on) {
-        if (g_state == State::Bar || g_state == State::Panel) HoldUntilHovered(9000);
-        else SetState(State::Listen);
+        if (g_state == State::Bar || g_state == State::Panel) {
+            HoldUntilHovered(9000);
+            return;
+        }
+        if (g_state != State::Listen) {
+            g_pillW = kListenW;
+            g_pillH = kMiniH;
+            g_pillKeep = false;
+        }
+        SetState(State::Listen);
     } else if (g_state == State::Listen) {
-        SetState(RestState());
+        g_closeAt = NowMs() + 700; // la page peut garder la pilule pour la réponse : elle a 0,7 s pour le dire
     }
 }
 
@@ -595,6 +619,7 @@ void ApplyConfig(const std::string& payload) {
     Config c = g_cfg;
     bool autostartOn = autostart::Enabled(), wantAutostart = autostartOn;
     int wantVoice = -1;
+    std::string wantModel;
     for (const auto& line : util::Split(payload, '\n')) {
         auto kv = util::Split(line, '=', 2);
         if (kv.size() != 2) continue;
@@ -610,8 +635,10 @@ void ApplyConfig(const std::string& payload) {
         else if (k == "autostart") wantAutostart = v == "1";
         else if (k == "miniLyrics") c.miniLyrics = v == "1";
         else if (k == "voiceWake") wantVoice = v == "1";
+        else if (k == "voiceModel") wantModel = v;
     }
     bool geometryChanged = c.mode != g_cfg.mode || c.width != g_cfg.width || c.panelH != g_cfg.panelH;
+    if (!wantModel.empty()) voice::SetModel(wantModel); // avant Apply : l'écoute démarre avec le bon modèle
     if (wantVoice >= 0) voice::Apply(wantVoice == 1);
     bool widthChanged = c.width != g_cfg.width;
     g_cfg = c;
@@ -641,13 +668,6 @@ void OpenPanel() {
     SetState(State::Panel);
     HoldUntilHovered(8000);
     Activate();
-}
-
-void OpenPanelAsync() {
-    g_idle_add(+[](gpointer) -> gboolean {
-        OpenPanel();
-        return G_SOURCE_REMOVE;
-    }, nullptr);
 }
 
 void SetListeningAsync(bool on) {
@@ -680,6 +700,24 @@ void SetMini(int widthDip) {
     g_miniW = w;
     if (g_state == State::Mini && resized) AnimateTo(TargetRect(State::Mini), 320, false);
     else if (IsResting(g_state) && RestState() != g_state) SetState(RestState());
+}
+
+
+// Taille de la pilule voulue par la page (js/features/pill.js), en DIP ; keep : elle reste ouverte même quand la voix
+// a fini d'écouter (la réponse s'y affiche). Hauteur 0 : la page la referme.
+void SetPill(int widthDip, int heightDip, bool keep) {
+    g_pillSince = NowMs();
+    if (heightDip <= 0) {
+        g_pillKeep = false;
+        g_closeAt = 0; // le dock la range à son prochain passage si la voix n'écoute plus
+        return;
+    }
+    if (g_state == State::Bar || g_state == State::Panel) return;
+    g_pillW = std::clamp(widthDip, kListenW, std::max(kListenW, std::min(kPillMaxW, g_cfg.width)));
+    g_pillH = std::clamp(heightDip, kMiniH, kPillMaxH);
+    g_pillKeep = keep;
+    if (g_state == State::Listen) AnimateTo(TargetRect(State::Listen), 260, false);
+    else if (keep) SetState(State::Listen);
 }
 
 void RevealBriefly(int ms) {

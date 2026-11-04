@@ -18,6 +18,7 @@ function setState(st, info = {}) {
   const b = document.body;
   b.classList.remove('st-hidden', 'st-progress', 'st-peek', 'st-mini', 'st-music', 'st-listen', 'st-bar', 'st-panel');
   b.classList.add('st-' + st);
+  b.dispatchEvent(new CustomEvent('dockstate', { detail: { st, prev } })); // la pilule vocale (pill.js) se ferme avec l'état « listen »
   $('#pinBtn').classList.toggle('on', S.pinned);
 
   if (st === 'progress') startStrip(info.delay || 500);
