@@ -28,8 +28,8 @@ body:not(.preview) .ambient {
     calc(100% - 2 * var(--fl) - 2 * var(--r) + 8px) 100%,
     var(--r) var(--r),
     var(--r) var(--r),
-    var(--fl) var(--fl),
-    var(--fl) var(--fl);
+    calc(var(--fl) + 2px) var(--fl), /* 2 px de noir en plus côté corps : sinon une couture sombre apparaît entre l'évasement et le corps (même cause que le recouvrement ci-dessus) */
+    calc(var(--fl) + 2px) var(--fl);
   -webkit-mask-position:
     var(--fl) 0,
     calc(var(--fl) + var(--r) - 4px) 0,
