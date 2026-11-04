@@ -1,6 +1,7 @@
 name: Release
 
 # Publier : git tag v0.1.0 && git push origin v0.1.0
+# Les notes de release sont générées depuis les messages de commit (tools/release-notes.sh).
 on:
   push:
     tags: ['v*']
@@ -79,6 +80,14 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Historique complet : les notes sont la liste des commits depuis le tag précédent.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Notes de release (commits depuis le tag précédent)
+        run: bash tools/release-notes.sh "${{ github.ref_name }}" release-notes.md && cat release-notes.md
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -93,6 +102,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          generate_release_notes: true
+          # Texte produit par tools/release-notes.sh : lignes « - … » lues par l'écran « Nouveautés » de l'app.
+          body_path: release-notes.md
           # v0.3.1-dev… : version de test, jamais « dernière release » (l'updater ne retient que vX.Y.Z).
           prerelease: ${{ contains(github.ref_name, '-') }}
