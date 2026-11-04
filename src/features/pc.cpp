@@ -3,8 +3,10 @@
 #include "common/util.h"
 #include "features/media.h"
 #include "web/bridge.h"
+#include "web/webview_host.h"
 
 #include <windows.h>
+#include <tlhelp32.h>
 #include <commdlg.h>
 #include <endpointvolume.h>
 #include <mmdeviceapi.h>
@@ -404,6 +406,49 @@ void RunRoutine(const std::string& steps) {
     }).detach();
 }
 
+// ------------------------------------------------------------------ applis qui déclenchent un mode
+
+static std::set<std::wstring> g_watch;   // noms d'exécutable surveillés, en minuscules (thread de l'interface seulement)
+static std::set<std::wstring> g_running; // parmi eux, ceux qui tournaient au dernier relevé
+
+static std::set<std::wstring> RunningWatched() {
+    std::set<std::wstring> out;
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap == INVALID_HANDLE_VALUE) return out;
+    PROCESSENTRY32W e{};
+    e.dwSize = sizeof e;
+    for (BOOL ok = Process32FirstW(snap, &e); ok; ok = Process32NextW(snap, &e)) {
+        std::wstring name = Lower(e.szExeFile);
+        if (g_watch.count(name)) out.insert(name);
+    }
+    CloseHandle(snap);
+    return out;
+}
+
+void WatchApps(const std::string& names) {
+    g_watch.clear();
+    for (const auto& line : util::Split(names, '\n')) {
+        std::wstring n = Lower(util::Widen(line));
+        while (!n.empty() && (n.back() == L'\r' || n.back() == L' ')) n.pop_back();
+        if (n.empty() || n.size() > 128 || g_watch.size() >= 64) continue;
+        if (n.find_first_of(L"\\/:") != std::wstring::npos) continue; // un nom seulement, jamais un chemin
+        if (n.find(L'.') == std::wstring::npos) n += L".exe";
+        g_watch.insert(n);
+    }
+    g_running = RunningWatched(); // ce qui tourne déjà ne déclenche rien
+}
+
+void CheckApps() {
+    if (g_watch.empty()) return;
+    std::set<std::wstring> now = RunningWatched();
+    for (const auto& n : now) {
+        if (g_running.count(n)) continue;
+        webview::Wake(); // dock rangé : la page dort, il faut qu'elle puisse démarrer le mode
+        bridge::PostToPage("{\"t\":\"appstart\",\"app\":" + util::Json(util::Narrow(n)) + "}");
+    }
+    g_running = std::move(now);
+}
+
 static bool DefaultEndpointVolume(Com<IAudioEndpointVolume>& volume) {
     Com<IMMDeviceEnumerator> devices;
     Com<IMMDevice> device;
@@ -440,7 +485,7 @@ void PickFile(const std::string& id, HWND owner) {
         ofn.lpstrFilter = L"Applications et raccourcis\0*.exe;*.lnk;*.url\0Tous les fichiers\0*.*\0";
         ofn.lpstrFile = file;
         ofn.nMaxFile = MAX_PATH;
-        ofn.lpstrTitle = L"Choisir ce que la routine ouvre";
+        ofn.lpstrTitle = L"Choisir une application ou un fichier";
         ofn.Flags = OFN_FILEMUSTEXIST | OFN_NODEREFERENCELINKS | OFN_NOCHANGEDIR;
         bool ok = GetOpenFileNameW(&ofn);
         Reply(id, std::string("\"ok\":true,\"path\":") + util::Json(ok ? util::Narrow(file) : ""));

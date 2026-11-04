@@ -66,6 +66,11 @@
         <div class="time" id="clockTime">--:--</div>
         <div class="sub" id="clockSub"></div>
       </div>
+      <!-- Mode en cours (js/features/modes.js) : ouvre la page Modes ; la croix l'arrête -->
+      <div class="amode-pill" id="modePill" hidden>
+        <button type="button" class="amode-open" id="modeOpen"><span class="amode-dot"></span><span class="amode-name-txt" id="modeName"></span></button>
+        <button type="button" class="amode-x" id="modeStop" title="Arrêter le mode"><i data-icon="x"></i></button>
+      </div>
     </div>
 
     <!-- Mini-lecteur (visible quand une musique est suivie) -->
@@ -305,7 +310,7 @@
           <button type="button" data-page="behavior" title="Comportement"><i data-icon="eye"></i><span>Comportement</span></button>
           <button type="button" data-page="music" title="Musique"><i data-icon="music"></i><span>Musique</span></button>
           <button type="button" data-page="voice" title="Voix"><i data-icon="mic"></i><span>Voix</span></button>
-          <button type="button" data-page="routines" title="Routines"><i data-icon="routine"></i><span>Routines</span></button>
+          <button type="button" data-page="modes" title="Modes"><i data-icon="routine"></i><span>Modes</span></button>
           <button type="button" data-page="system" title="Système"><i data-icon="cpu"></i><span>Système</span></button>
         </nav>
         <div class="scroll settings" id="settingsBody">
@@ -505,12 +510,12 @@
             </div>
           </div>
 
-          <div class="set-page" data-page="routines">
+          <div class="set-page" data-page="modes">
             <div class="card glass">
-              <h3>Routines</h3>
-              <p class="hint card-hint">Des étapes lancées d’un coup : ouvrir tes applis, régler le volume, lancer la musique… Aeria peut aussi les lancer : « lance le mode travail ».</p>
-              <div id="routines"></div>
-              <button type="button" class="ghost add-routine" id="addRoutine"><i data-icon="plus"></i>Nouvelle routine</button>
+              <h3>Modes</h3>
+              <p class="hint card-hint">Un mode lance d’abord ses étapes de démarrage (ouvrir tes applis, régler le volume, lancer la musique…), puis reste en cours : une pastille s’affiche dans la barre et ses comportements s’appliquent jusqu’à ce que tu l’arrêtes. Aeria peut aussi le démarrer : « lance le mode travail ».</p>
+              <div id="modes"></div>
+              <button type="button" class="ghost add-mode" id="addMode"><i data-icon="plus"></i>Nouveau mode</button>
             </div>
           </div>
 

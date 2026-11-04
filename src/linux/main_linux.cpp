@@ -147,7 +147,7 @@ void Activate(GtkApplication* app, gpointer) {
 namespace host {
 
 void ChooseFile(std::function<void(const std::string&)> done) {
-    GtkFileChooserNative* dialog = gtk_file_chooser_native_new("Choisir ce que la routine ouvre", GTK_WINDOW(g_window),
+    GtkFileChooserNative* dialog = gtk_file_chooser_native_new("Choisir une application ou un fichier", GTK_WINDOW(g_window),
                                                                GTK_FILE_CHOOSER_ACTION_OPEN, "Ouvrir", "Annuler");
     auto* callback = new std::function<void(const std::string&)>(std::move(done));
     g_signal_connect(dialog, "response", G_CALLBACK(+[](GtkNativeDialog* d, gint response, gpointer data) {

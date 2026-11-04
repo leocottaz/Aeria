@@ -88,15 +88,15 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `js/features/files.js` | Recherche de fichiers pour Claude : résultats rangés par recherche (cartes cliquables), ouverture par numéro dans la dernière recherche, contexte du mode Pro. |
 | `js/features/updater.js` | Mises à jour : interroge l'API GitHub (`releases/latest`) au démarrage puis toutes les 6 h, compare les versions, affiche la bannière (`#updateBanner`, visible panneau ouvert) et la carte des Réglages → Système ; envoie `update` au natif au clic. |
 | `js/features/voice.js` | Voix : page « Voix » des Réglages (état, téléchargement du modèle), champ « Demander » éclairé pendant l'écoute, envoie à Aeria la phrase reçue (`heard`). |
-| `js/features/routines.js` | Routines : données, éditeur des Réglages, lancement (`routine` vers le natif), recherche par nom pour Claude. |
+| `js/features/modes.js` | Modes : données (`aeria.modes`, anciennes routines reprises), éditeur des Réglages, démarrage (étapes de démarrage envoyées au natif par `routine`), déclencheur « ouverture d'une appli » (`apps` du mode, `syncWatch` → `watch`, `onAppStart` ← `appstart`), mode en cours (`aeria.activeMode`) avec sa pilule dans la barre, comportements `BEHAVIORS` (réglages imposés via `setOverrides`/`eff` de `settings.js`), recherche par nom pour Claude. |
 | `js/chat/connection.js` | Section « Connexion » des Réglages : statut de Claude Code, clé API, clés gratuites. |
 | `js/chat/chat.js` | Conversation : état (`convo`, `turn`), envoi, évènements de streaming, rendu. |
 | `js/chat/attach.js` | Fichiers joints : trombone, glisser-déposer sur tout le dock, collage ; la page lit elle-même les fichiers (File API, rien ne passe par le natif). Images (réduites à 1568 px), PDF (8 Mo), texte/code (100 Ko), 5 au plus ; blocs `image` / `document` / `<fichier nom="…">` ajoutés au message. `unsupported` refuse ce que le mode ne lit pas (Pro : texte seulement ; Groq : pas d'image ; PDF : mode Clé API). `forStorage` retire le binaire de la conversation enregistrée. |
 | `js/chat/api.js` | Transport mode Clé API (API Messages + outils, dont l'outil serveur `web_search` quand le réglage `webSearch` est actif : blocs `server_tool_use` / `web_search_tool_result`, reprise sur `pause_turn`). Les résultats de recherche ne sont pas gardés dans la conversation enregistrée (`slim`, `chat.js`). |
 | `js/chat/free.js` | Transport mode Gratuit (Gemini, Groq ; API compatibles OpenAI) : conversion de la conversation (format Claude ↔ OpenAI), outils, choix automatique du modèle dans la liste du service. Sert aussi de secours (`tryFallback` dans `chat.js`) quand Claude échoue. |
-| `js/chat/pro.js` | Transport mode Pro (Claude Code) + exécution des lignes `[[rappel|…]]`, `[[note|…]]`, `[[tache|…]]` (`[[tache!|…]]` = importante), `[[fait|…]]`, `[[chercher|mots|ext|du|au]]`, `[[ouvrir|n]]`, `[[site|https://…]]`, `[[routine|Nom]]` (`actionToTool`). |
-| `js/chat/prompts.js` | Prompt système (recalculé à chaque message, jamais gardé dans la conversation), bloc `[Contexte]` (date, heure, morceau en cours, routines) ; en mode Pro, listes des rappels, des tâches et de la dernière recherche de fichiers. |
-| `js/chat/tools.js` | Outils (`create_reminder`, `list_reminders`, `create_note`, `create_todo`, `list_todos`, `complete_todo`, `search_files`, `open_file`, `open_url` (page web dans le navigateur : http(s) seulement, via la commande `openurl`), `run_routine`, `timer`) et leur exécution (`execTool`, asynchrone). |
+| `js/chat/pro.js` | Transport mode Pro (Claude Code) + exécution des lignes `[[rappel|…]]`, `[[note|…]]`, `[[tache|…]]` (`[[tache!|…]]` = importante), `[[fait|…]]`, `[[chercher|mots|ext|du|au]]`, `[[ouvrir|n]]`, `[[site|https://…]]`, `[[mode|Nom]]` (`[[mode|stop]]` = arrêter le mode) (`actionToTool`). |
+| `js/chat/prompts.js` | Prompt système (recalculé à chaque message, jamais gardé dans la conversation), bloc `[Contexte]` (date, heure, morceau en cours, modes et mode en cours) ; en mode Pro, listes des rappels, des tâches et de la dernière recherche de fichiers. |
+| `js/chat/tools.js` | Outils (`create_reminder`, `list_reminders`, `create_note`, `create_todo`, `list_todos`, `complete_todo`, `search_files`, `open_file`, `open_url` (page web dans le navigateur : http(s) seulement, via la commande `openurl`), `start_mode`, `stop_mode`, `timer`) et leur exécution (`execTool`, asynchrone). |
 | `js/chat/markdown.js` | Markdown minimal et sûr. |
 | `css/*.css` | `base` (thème, verre, contrôles), `dock`, puis un fichier par onglet. |
 
@@ -132,7 +132,8 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `voice` | `status` · `download[:id]` · `delete:id` · `listen` · `cancel` | Voix : renvoie l'état, télécharge un modèle (`base` 60 Mo, `small` 190 Mo, `medium` 540 Mo ; SHA-256 vérifié) ou le supprime, écoute la prochaine phrase sans attendre « Aeria » (boutons micro ; avec l'écoute permanente éteinte, le micro ne reste ouvert que le temps de cette phrase) ou arrête cette écoute. L'interrupteur et le modèle choisi passent par `config` (`voiceWake=1`, `voiceModel=small`). |
 | `search` | id, mots, extension, du, au | Recherche de fichiers → `reply` avec `results` (`path`, `name`, `modified`, `size`). |
 | `openfound` | chemin | Ouvre un fichier déjà renvoyé par `search` (sinon rien). |
-| `routine` | lignes `type\tvaleur` (`open`, `volume`, `mute`, `music`, `wait`, `lock`) | Exécute une routine dans un thread natif. |
+| `routine` | lignes `type\tvaleur` (`open`, `volume`, `mute`, `music`, `wait`, `lock`) | Exécute les étapes de démarrage d'un mode dans un thread natif (le mode « en cours » et ses comportements restent côté page). |
+| `watch` | noms d'exécutable, un par ligne (jamais un chemin ; vide = rien) | Applis qui déclenchent un mode : `pc::WatchApps`, relevé des processus chaque seconde par `pc::CheckApps` (même minuterie que les rappels, thread de l'interface). Seule une ouverture **après** la commande déclenche ; ce qui tourne déjà est ignoré. Renvoie `appstart`. |
 | `volume` | 0 à 100 | Volume de la sortie audio par défaut. |
 | `pickfile` | id | Fenêtre « Ouvrir » → `reply` avec `path` (vide si annulé). |
 | `quit` | — | Quitte. |
@@ -153,6 +154,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `ccstatus` | `found`, `path`, `version` | Résultat de `ccstatus`. |
 | `fire` | `id` | Un rappel sonne. |
 | `timerdone` | — | Le compte à rebours du minuteur est fini. |
+| `appstart` | `app` (nom de l'exécutable, minuscules) | Une appli surveillée (commande `watch`) vient de s'ouvrir : la page démarre le mode qui l'attend (`onAppStart`, `modes.js`). Windows : la page est d'abord sortie de veille. |
 | `media` | `active`, `app`, `title`, `artist`, `album`, `status`, `pos`, `dur`, `at`, `canNext`, `canPrev`, `canSeek`, (`art` : data URL, seulement au changement de morceau) | Musique suivie. `pos` est la position (ms) à l'instant `at` (ms epoch). |
 | `hotkey`, `show` | (`tab`) | Ouverture par raccourci ou menu de l'icône. |
 | `reply` | `id`, `ok`, (`error`, `results`, `path`) | Réponse à une commande `ask()` (`search`, `pickfile`). |
@@ -162,7 +164,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 
 | Quoi | Où |
 | --- | --- |
-| Rappels, to-do, notes, routines, réglages, conversation, dernières recherches de fichiers (clés `aeria.*`) | `localStorage` de WebView2 : `%LOCALAPPDATA%\Aeria\WebView2` |
+| Rappels, to-do, notes, modes, réglages, conversation, dernières recherches de fichiers (clés `aeria.*`) | `localStorage` de WebView2 : `%LOCALAPPDATA%\Aeria\WebView2` |
 | Clé API (DPAPI) | `%APPDATA%\Aeria\apikey.bin` |
 | Clés gratuites (DPAPI) | `%APPDATA%\Aeria\geminikey.bin`, `groqkey.bin` |
 | Dossier de travail de Claude Code | `%LOCALAPPDATA%\Aeria\claude-chat` |
@@ -256,7 +258,7 @@ git tag v0.1.0 && git push origin v0.1.0
 - **Ajouter un message vers la page** : `bridge::PostToPage("{\"t\":\"…\"}")` (utiliser `util::Json` pour les chaînes) et un `case` dans `onNative` (`ui/js/main.js`).
 - **Ajouter un module natif** : `src/<domaine>/nom.h` + `nom.cpp`, un `namespace nom`, et une ligne dans `add_executable` (`CMakeLists.txt`). Pour Linux : `src/linux/nom_linux.cpp` avec la même interface, et une ligne dans `cmake/linux.cmake`.
 - **Ajouter une fonctionnalité à l'interface** : `ui/js/features/nom.js` qui exporte `setupNom()` / `renderNom()`, appelés dans `init()` (`ui/js/main.js`) ; son style dans `ui/css/nom.css`, lié dans `index.html`. Pour un nouvel onglet : sa vue dans `index.html` et son entrée dans `NAV_TABS` (`ui/js/dock/dock.js`).
-- **Ajouter un réglage** : valeur par défaut dans `DEFAULTS` (`ui/js/core/settings.js`) et un contrôle avec `data-setting="nom"` dans la bonne page (`.set-page`) de `index.html` : `aeria`, `appearance`, `behavior`, `music`, `routines` ou `system` (segmenté, curseur ou interrupteur sont gérés automatiquement). Pour amener l'utilisateur sur une page : `switchTab('settings')` puis `openSettingsPage('…')`. S'il concerne le natif : l'ajouter à `NATIVE_KEYS` et `sendConfig()`, puis le lire dans `dock::ApplyConfig`.
+- **Ajouter un réglage** : valeur par défaut dans `DEFAULTS` (`ui/js/core/settings.js`) et un contrôle avec `data-setting="nom"` dans la bonne page (`.set-page`) de `index.html` : `aeria`, `appearance`, `behavior`, `music`, `modes` ou `system` (segmenté, curseur ou interrupteur sont gérés automatiquement). Pour amener l'utilisateur sur une page : `switchTab('settings')` puis `openSettingsPage('…')`. S'il concerne le natif : l'ajouter à `NATIVE_KEYS` et `sendConfig()`, puis le lire dans `dock::ApplyConfig`.
 - **Ajouter un outil pour Claude** : définition dans `TOOLS` et exécution dans `execTool` (`ui/js/chat/tools.js`), libellé dans `toolHTML` (`ui/js/chat/chat.js`). Pour le mode Pro, documenter la ligne d'action dans `PRO_ACTIONS` (`prompts.js`) et la lire dans `commitCcAnswer` (`pro.js`).
 - **Changer la taille de la barre** : `kBarH`/`kInset` dans `src/app/dock.cpp` **et** `src/linux/dock_linux.cpp`, **et** `--bar-h`/`--inset` dans `ui/css/base.css`.
 

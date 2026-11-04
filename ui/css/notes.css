@@ -75,7 +75,9 @@
   transform: scale(.97) translateY(10px);
   transition: opacity .25s var(--smooth), transform .45s var(--smooth), visibility 0s .45s;
 }
-.note-editor.open { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition-delay: 0s; }
+/* visibility / pointer-events : hérités de la vue Notes, sinon la note ouverte resterait posée sur l'onglet d'après
+   (un enfant « visible » l'emporte sur un parent masqué). */
+.note-editor.open { opacity: 1; visibility: inherit; pointer-events: inherit; transform: none; transition-delay: 0s; }
 .nt-bg {
   background:
     radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--n1) calc(var(--nk) * 1.15), transparent), transparent 72%),

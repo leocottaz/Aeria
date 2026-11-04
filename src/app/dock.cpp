@@ -5,6 +5,7 @@
 #include "app/tray.h"
 #include "common/util.h"
 #include "features/media.h"
+#include "features/pc.h"
 #include "features/reminders.h"
 #include "features/voice.h"
 #include "web/bridge.h"
@@ -489,7 +490,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         case WM_TIMER:
             if (wp == TIMER_ANIM) AnimStep();
             else if (wp == TIMER_POLL) Poll();
-            else if (wp == TIMER_REMINDERS) reminders::Check();
+            else if (wp == TIMER_REMINDERS) {
+                reminders::Check();
+                pc::CheckApps(); // applis qui déclenchent un mode
+            }
             return 0;
         case WM_SIZE:
             UpdateWebBounds();

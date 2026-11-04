@@ -1,13 +1,13 @@
 // Outils proposés à Claude (mode Clé API) et leur exécution locale. Le mode Pro réutilise
 // execTool pour ses lignes [[rappel|…]], [[note|…]], [[tache|…]], [[fait|…]], [[chercher|…]],
-// [[ouvrir|…]], [[site|…]], [[routine|…]] et [[minuteur|…]].
+// [[ouvrir|…]], [[site|…]], [[mode|…]] et [[minuteur|…]].
 import { send } from '../core/bridge.js';
 import { fmtWhen } from '../core/format.js';
 import { reminders, REPEAT_NAMES, upcomingReminders, addReminder } from '../features/reminders.js';
 import { addNote } from '../features/notes.js';
 import { addTodo, completeTodo, openTodos, doneTodos } from '../features/todo.js';
 import { searchFiles, openFound, describeFound } from '../features/files.js';
-import { findRoutine, runRoutine, routineNames } from '../features/routines.js';
+import { findMode, startMode, stopMode, modeNames, behaviorNames } from '../features/modes.js';
 import { startCountdown, startStopwatch, pauseTimer, resumeTimer, stopTimer } from '../features/timer.js';
 
 const TOOLS = [
@@ -129,15 +129,23 @@ const TOOLS = [
     eager_input_streaming: true,
   },
   {
-    name: 'run_routine',
-    description: "Lance une routine de l'utilisateur (suite d'actions qu'il a définie : ouvrir des applis, volume, musique…). "
-      + 'Les routines existantes sont listées dans le bloc [Contexte].',
+    name: 'start_mode',
+    description: "Démarre un mode de l'utilisateur : ses étapes de démarrage s'exécutent (ouvrir des applis, volume, musique…), "
+      + "puis le mode reste en cours (pastille dans le dock, comportements actifs) jusqu'à son arrêt. Un seul mode à la fois : en démarrer un remplace l'actuel. "
+      + 'Les modes existants et le mode en cours sont listés dans le bloc [Contexte].',
     input_schema: {
       type: 'object',
-      properties: { name: { type: 'string', description: 'Nom de la routine, ex. « Mode travail ».' } },
+      properties: { name: { type: 'string', description: 'Nom du mode, ex. « Travail ».' } },
       required: ['name'],
       additionalProperties: false,
     },
+    strict: true,
+    eager_input_streaming: true,
+  },
+  {
+    name: 'stop_mode',
+    description: "Arrête le mode en cours (« arrête le mode travail », « fin du mode »). Ses comportements cessent ; ses étapes de démarrage ne sont pas annulées.",
+    input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
     strict: true,
     eager_input_streaming: true,
   },
@@ -178,13 +186,18 @@ async function execTool(name, input, key = '') {
     send('openurl', url.href); // le natif refuse de toute façon ce qui n'est pas http(s)
     return `Page ouverte dans le navigateur : ${url.href}`;
   }
-  if (name === 'run_routine') {
-    const r = findRoutine(typeof input.name === 'string' ? input.name : '');
-    const names = routineNames();
-    if (!r) throw new Error(names.length ? `Routine introuvable. Routines : ${names.join(', ')}.` : "L'utilisateur n'a encore créé aucune routine (Réglages › Routines).");
-    const n = runRoutine(r);
-    if (!n) throw new Error(`La routine « ${r.name} » n'a aucune étape.`);
-    return `Routine « ${r.name} » lancée (${n} étape${n > 1 ? 's' : ''}).`;
+  if (name === 'start_mode' || name === 'run_routine') { // run_routine : ancien nom, encore présent dans d'anciennes conversations
+    const m = findMode(typeof input.name === 'string' ? input.name : '');
+    const names = modeNames();
+    if (!m) throw new Error(names.length ? `Mode introuvable. Modes : ${names.join(', ')}.` : "L'utilisateur n'a encore créé aucun mode (Réglages › Modes).");
+    const n = startMode(m);
+    const b = behaviorNames(m);
+    return `Mode « ${m.name} » démarré (${n ? `${n} étape${n > 1 ? 's' : ''} lancée${n > 1 ? 's' : ''}` : 'aucune étape de démarrage'}${b.length ? ` ; en cours : ${b.join(', ').toLowerCase()}` : ''}).`;
+  }
+  if (name === 'stop_mode') {
+    const m = stopMode();
+    if (!m) throw new Error("Aucun mode n'est en cours.");
+    return `Mode « ${m.name} » arrêté.`;
   }
   if (name === 'timer') {
     if (input.action === 'countdown') return startCountdown(Math.round(Number(input.seconds)) * 1000);

@@ -10,7 +10,7 @@ import { fireReminder, renderReminders, saveReminders, setupReminders } from './
 import { renderNotes, setupNotes } from './features/notes.js';
 import { renderTodos, setupTodo } from './features/todo.js';
 import { setupToday, renderToday } from './features/today.js';
-import { setupRoutines } from './features/routines.js';
+import { setupModes, syncWatch, onAppStart } from './features/modes.js';
 import { setupTimer, renderTimer, finishTimer, syncTimer } from './features/timer.js';
 import { renderChat, focusComposer, setupChat } from './chat/chat.js';
 import { onMedia, setupMusic, connectMusic, previewLyrics, fetchLyrics, guessTrack } from './features/music.js';
@@ -60,6 +60,7 @@ function onNative(m) {
     case 'error': http.onError(m.id, m.status, m.body); break;
     case 'fire': fireReminder(m.id); break;
     case 'timerdone': finishTimer(); break;
+    case 'appstart': onAppStart(m.app); break; // une appli surveillée s'est ouverte : un mode peut démarrer
     case 'media': onMedia(m); break;
     case 'update': onUpdateMessage(m); break;
     case 'voice': onVoice(m); break;
@@ -80,7 +81,7 @@ function init() {
   setupNotes();
   setupTodo();
   setupToday();
-  setupRoutines();
+  setupModes();
   setupTimer();
   setupChat();
   setupMusic();
@@ -117,6 +118,7 @@ function init() {
     });
     saveReminders();
     syncTimer();
+    syncWatch(); // applis qui déclenchent un mode
     connectMusic();
   } else {
     // Aperçu dans un navigateur : on affiche directement le panneau. window.__preview permet

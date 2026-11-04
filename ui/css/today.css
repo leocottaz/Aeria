@@ -3,6 +3,9 @@
 .today-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 10px; align-items: start; }
 .td-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .td-card { padding: 10px 12px 12px; border-radius: 16px; }
+.td-card[data-card] { cursor: pointer; transition: border-color .2s; } /* le fond de la carte ouvre son écran */
+.td-card[data-card]:hover { border-color: var(--stroke-hi); }
+.td-row, .td-add { cursor: default; }
 .td-card.ringing { border-color: color-mix(in srgb, var(--accent) 60%, transparent); background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 20%, transparent), var(--glass-b)); }
 
 .td-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }

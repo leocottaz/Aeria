@@ -90,7 +90,7 @@ cmake --build build-deb && (cd build-deb && cpack -G DEB)
   - **Clé API** : facturée à l'usage, chiffrée avec DPAPI dans `%APPDATA%\Aeria\apikey.bin`.
   - **Gratuit / autres services** : Gemini ou Groq (gratuits), ou OpenAI (payant, à l'usage), avec votre propre clé ; sert aussi de secours si Claude échoue.
 - Musique : quand Deezer joue, un mini-lecteur apparaît dans la barre et l'onglet **Musique** montre la pochette, la progression, les commandes et les **paroles** synchronisées (sources : [LRCLIB](https://lrclib.net), puis [lrcmux](https://lrcmux.dev) en secours, récupérées à la demande). Réglages → Musique : Deezer seulement ou toutes les sources.
-- Claude peut créer des rappels, des notes et des tâches, chercher et ouvrir des fichiers, lancer des routines et le minuteur.
+- Claude peut créer des rappels, des notes et des tâches, chercher et ouvrir des fichiers, démarrer ou arrêter des modes (étapes de démarrage, puis comportements tant que le mode est en cours) et piloter le minuteur.
 
 ## Structure
 
@@ -112,7 +112,7 @@ ui/                  interface (copiée à côté de l'exe à chaque build)
   js/main.js         démarrage + routeur des messages du natif
   js/core/           pont avec le natif, état, réglages, utilitaires
   js/dock/           états visuels, onglets, mini-dock
-  js/features/       rappels, to-do, notes, minuteur, musique, fichiers, routines
+  js/features/       rappels, to-do, notes, minuteur, musique, fichiers, modes
   js/chat/           conversation, transports (API, Pro, Gratuit), outils, prompts
 tools/               scripts de développement (aperçu, DevTools, captures, mesures)
 third_party/         SDK WebView2 (Microsoft.Web.WebView2 1.0.4314.35) ; whisper.cpp v1.9.5 (sous-module git)

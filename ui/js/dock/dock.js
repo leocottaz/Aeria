@@ -1,7 +1,7 @@
 // États du dock (masqué, languette, barre, panneau), onglets, horloge, barre et raccourcis.
 import { $, $$, store } from '../core/util.js';
 import { send } from '../core/bridge.js';
-import { settings } from '../core/settings.js';
+import { settings, openSettingsPage } from '../core/settings.js';
 import { S } from '../core/state.js';
 import { fmtTime } from '../core/format.js';
 import { reminders, upcomingReminders, renderReminders, hasPendingReminders } from '../features/reminders.js';
@@ -141,6 +141,7 @@ function setupBar() {
   $('#npOpen').addEventListener('click', () => openTab('music'));
   $('#np .np-text').addEventListener('click', () => openTab('music')); // toute la pilule ouvre la musique, sauf lecture/pause
   $('#mcardOpen').addEventListener('click', () => openTab('music'));
+  $('#modeOpen').addEventListener('click', () => { openSettingsPage('modes'); openTab('settings'); }); // la croix (#modeStop) est gérée par modes.js
   $('#pill').addEventListener('click', (e) => openTab(e.target.closest('#pillTimer') ? 'timer' : alertTab() || miniTab()));
 }
 

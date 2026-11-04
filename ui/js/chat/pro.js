@@ -95,7 +95,9 @@ function actionToTool(kind, body) {
   }
   if (kind === 'ouvrir') return ['open_file', { number: parseInt(body, 10) }];
   if (kind === 'site') return ['open_url', { url: body.trim() }];
-  if (kind === 'routine') return ['run_routine', { name: body.trim() }];
+  if (kind === 'mode' || kind === 'routine') { // routine : ancien nom de la ligne
+    return /^(stop|arr[eêè]t(er)?|fin)$/i.test(body.trim()) ? ['stop_mode', {}] : ['start_mode', { name: body.trim() }];
+  }
   if (kind === 'minuteur') {
     const what = body.trim().toLowerCase();
     const action = { chrono: 'stopwatch', pause: 'pause', reprendre: 'resume', stop: 'stop' }[what];

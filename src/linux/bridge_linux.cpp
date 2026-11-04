@@ -142,6 +142,8 @@ void HandleMessage(const std::string& msg) {
         pc::OpenFound(arg);
     } else if (cmd == "routine") { // une étape par ligne : type \t valeur
         pc::RunRoutine(arg);
+    } else if (cmd == "watch") { // noms d'exécutable, un par ligne : applis qui déclenchent un mode
+        pc::WatchApps(arg);
     } else if (cmd == "volume") {
         pc::SetVolume(std::atoi(arg.c_str()));
     } else if (cmd == "pickfile") {

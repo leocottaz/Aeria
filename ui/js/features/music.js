@@ -3,7 +3,7 @@
 // paroles, récupérées à la demande sur LRCLIB ou lrcmux et synchronisées quand c'est possible.
 import { $, $$, esc, clamp, store } from '../core/util.js';
 import { send } from '../core/bridge.js';
-import { settings, setSetting, onSettingChange } from '../core/settings.js';
+import { settings, eff, setSetting, onSettingChange } from '../core/settings.js';
 import { S } from '../core/state.js';
 import { setMiniLyric } from '../dock/mini.js';
 
@@ -68,7 +68,7 @@ function onMedia(m) {
   }
   render();
   // Nouveau morceau (ou musique qui démarre) : la carte musique descend un instant pour le montrer.
-  if (changed && isPlaying() && settings.musicReveal) {
+  if (changed && isPlaying() && eff('musicReveal')) { // un mode peut le couper (modes.js)
     const w = cardWidth();
     document.documentElement.style.setProperty('--mcard-w', `${w}px`);
     send('revealmusic', '4500', String(w));
@@ -177,7 +177,7 @@ function cardWidth() {
 
 // Mini-dock (js/dock/mini.js) : ligne en cours quand on écoute avec les paroles activées et synchronisées.
 function updateMini() {
-  const live = isPlaying() && settings.lyricsOpen && settings.miniLyrics && lyrics.state === 'ready' && lyrics.synced;
+  const live = isPlaying() && settings.lyricsOpen && eff('miniLyrics') && lyrics.state === 'ready' && lyrics.synced;
   const line = live ? lyrics.lines[lyrics.current] : null;
   setMiniLyric(live ? { text: line?.text || '♪', gap: !line?.text } : null);
 }

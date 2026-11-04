@@ -25,6 +25,14 @@ void OpenFound(const std::string& path);
 // la session), wait (secondes). Exécutée dans un thread : elle continue même quand le dock se
 // range et que la page est en veille.
 void RunRoutine(const std::string& steps);
+
+// Applis qui déclenchent un mode : noms d'exécutable, un par ligne (« teams.exe » ; jamais un chemin), liste vide = plus
+// de surveillance. Quand l'une d'elles apparaît alors qu'elle ne tournait pas au relevé précédent, la page reçoit
+// {"t":"appstart","app":"teams.exe"} (le nom en minuscules) et, sous Windows, sort de veille. Ce qui tourne déjà au moment
+// de l'appel ne déclenche rien. CheckApps est appelé chaque seconde, sur le thread de l'interface.
+void WatchApps(const std::string& names);
+void CheckApps();
+
 void SetVolume(int percent); // volume de la sortie audio par défaut (0 à 100)
 void SetMute(const std::string& mode); // "on", "off" ou "toggle" sur la sortie audio par défaut
 // Fenêtre « Ouvrir » possédée par le dock : elle passe devant lui même s'il est

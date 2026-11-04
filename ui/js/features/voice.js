@@ -2,7 +2,7 @@
 // (page « Voix » des Réglages, champ « Demander ») et on envoie à Aeria la phrase qu'il a comprise.
 import { $, $$, toast, autosize } from '../core/util.js';
 import { send } from '../core/bridge.js';
-import { settings, openSettingsPage, onSettingChange } from '../core/settings.js';
+import { settings, eff, openSettingsPage, onSettingChange } from '../core/settings.js';
 import { openTab, switchTab } from '../dock/dock.js';
 import { sendChat } from '../chat/chat.js';
 import { setupPill, pillActive, pillListening, pillWorking, pillPartial, pillSend } from './pill.js';
@@ -35,7 +35,7 @@ function render() {
   const status = $('#voiceStatus');
   if (!status) return;
   const m = state;
-  const on = settings.voiceWake;
+  const on = eff('voiceWake'); // un mode peut couper ou forcer l'écoute
   const model = MODELS[settings.voiceModel] ? settings.voiceModel : 'small';
   const info = MODELS[model];
   const have = models.includes(model);
@@ -175,7 +175,7 @@ function setupVoice() {
 
 // Le réglage a changé (interrupteur) ou la page vient de démarrer : on redemande l'état au natif.
 function syncVoice() {
-  if (!settings.voiceWake) state = { state: 'off' };
+  if (!eff('voiceWake')) state = { state: 'off' };
   render();
   send('voice', 'status');
 }

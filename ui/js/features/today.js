@@ -39,7 +39,7 @@ function remindersCard() {
       <div class="td-actions"><button type="button" class="icon-btn ok" data-act="rem-done" title="Marquer comme fait">${icon('check')}</button></div></div>`;
   }).join('');
   const more = rows.length - MAX_ROWS;
-  return `<section class="glass td-card">${head('reminders', 'bell', 'Rappels', pending.length + today.length || '')}
+  return `<section class="glass td-card" data-card="reminders">${head('reminders', 'bell', 'Rappels', pending.length + today.length || '')}
     ${body || '<div class="td-empty">Rien de prévu aujourd’hui</div>'}
     ${more > 0 ? `<button type="button" class="td-more" data-open="reminders">+ ${more} autre${more > 1 ? 's' : ''}</button>` : ''}</section>`;
 }
@@ -51,7 +51,7 @@ function todosCard() {
       <button type="button" class="todo-check" data-act="todo-done" title="Fait">${icon('check')}</button>
       <div class="td-body"><b class="td-title">${esc(t.text)}</b></div>${t.star ? icon('star', 'td-star') : ''}</div>`).join('');
   const more = open.length - MAX_ROWS;
-  return `<section class="glass td-card">${head('todo', 'todo', 'À faire', open.length || '')}
+  return `<section class="glass td-card" data-card="todo">${head('todo', 'todo', 'À faire', open.length || '')}
     ${body || '<div class="td-empty">Tout est fait ✨</div>'}
     ${more > 0 ? `<button type="button" class="td-more" data-open="todo">+ ${more} autre${more > 1 ? 's' : ''}</button>` : ''}
     <form class="td-add" id="tdAdd" autocomplete="off">${icon('plus')}<input id="tdAddInput" placeholder="Ajouter une tâche…" spellcheck="false" maxlength="200"></form></section>`;
@@ -64,7 +64,7 @@ function timerHTML() {
     ? '<button type="button" class="td-round" data-act="timer-ok" title="Arrêter la sonnerie">OK</button>'
     : `<button type="button" class="td-round" data-act="timer-toggle" title="${t.state === 'running' ? 'Pause' : 'Démarrer'}">${icon(t.state === 'running' ? 'pause' : 'play')}</button>`;
   const reset = t.state === 'paused' ? `<button type="button" class="icon-btn" data-act="timer-reset" title="Réinitialiser">${icon('reset')}</button>` : '';
-  return `<section class="glass td-card${t.state === 'ringing' ? ' ringing' : ''}">${head('timer', 'timer', 'Minuteur')}
+  return `<section class="glass td-card${t.state === 'ringing' ? ' ringing' : ''}" data-card="timer">${head('timer', 'timer', 'Minuteur')}
     <div class="td-timer"><div class="td-clock"><div class="td-time" data-live="timer"></div><div class="td-sub">${sub}</div></div>${reset}${main}</div>
     <div class="td-bar"><span data-live="bar"></span></div></section>`;
 }
@@ -111,7 +111,12 @@ function setupToday() {
     const open = e.target.closest('[data-open]');
     if (open) { openTab(open.dataset.open); return; }
     const btn = e.target.closest('[data-act]');
-    if (!btn) return;
+    if (!btn) {
+      // Le fond d'une carte ouvre son écran ; les boutons, les lignes (rappels, tâches) et le champ gardent leur rôle.
+      const card = e.target.closest('[data-card]');
+      if (card && !e.target.closest('button, input, form, .td-row')) openTab(card.dataset.card);
+      return;
+    }
     const id = btn.closest('.td-row')?.dataset.id;
     switch (btn.dataset.act) {
       case 'rem-done': completeReminder(id); dismissAlert(id); renderReminders(); break;

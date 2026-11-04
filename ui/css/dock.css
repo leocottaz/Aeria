@@ -332,6 +332,45 @@ body:not(.preview) .ambient {
 }
 .clock .sub.hot { color: var(--fg); }
 
+/* Pilule du mode en cours (js/features/modes.js), à droite de l'horloge. Sans animation continue (voir Pièges). */
+.has-mode .clock { min-width: 50px; } /* l'heure ne passe jamais sous la pilule */
+/* Avec le mini-lecteur la barre manque de place (la date est déjà masquée) : la pilule passe sous l'heure. */
+.has-music.has-mode .bar-left { display: grid; grid-template-columns: auto minmax(0, auto); align-items: center; column-gap: 10px; row-gap: 1px; }
+.has-music.has-mode .orb { grid-row: 1 / 3; }
+.has-music.has-mode .clock { grid-column: 2; grid-row: 1; }
+.has-music.has-mode .amode-pill { grid-column: 2; grid-row: 2; height: 20px; }
+.has-music.has-mode .amode-name-txt { max-width: 62px; }
+.amode-pill {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 48px; /* pastille + croix : le nom se tronque d'abord */
+  overflow: hidden;
+  align-items: center;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.amode-pill.pop-in { animation: pop .5s var(--spring) both; }
+.amode-open {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  height: 100%;
+  padding: 0 4px 0 9px;
+  border-radius: 12px 0 0 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.amode-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.amode-name-txt { min-width: 0; max-width: 92px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.amode-x { display: grid; flex: none; place-items: center; width: 22px; height: 100%; border-radius: 0 12px 12px 0; color: var(--fg2); }
+.amode-x:hover { background: var(--hover); color: var(--fg); }
+.amode-x .ic { width: 11px; height: 11px; }
+
 .ask {
   flex: 1;
   min-width: 140px;

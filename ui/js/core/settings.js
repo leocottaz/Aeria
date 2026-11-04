@@ -39,15 +39,34 @@ let settings = { ...DEFAULTS, ...store.get('settings', {}) };
 // La catégorie se déduit du mode enregistré (réglages d'avant les catégories).
 settings.category = settings.backend === 'free' ? 'free' : settings.backend === 'chatgpt' ? 'chatgpt' : 'claude';
 if (settings.category === 'claude') settings.claudeMode = settings.backend;
+if (settings.settingsPage === 'routines') settings.settingsPage = 'modes'; // la page « Routines » est devenue « Modes »
+
+// Réglages imposés par le mode en cours (js/features/modes.js) : ils passent avant ceux de l'utilisateur
+// sans les modifier, donc arrêter le mode rend ses réglages tels quels. Lire `eff(clé)` là où un mode doit pouvoir agir.
+let overrides = {};
+const eff = (key) => (key in overrides ? overrides[key] : settings[key]);
+// push = false au démarrage de la page : main.js envoie lui-même la config après « ready ».
+function setOverrides(next, push = true) {
+  if (JSON.stringify(next) === JSON.stringify(overrides)) return;
+  const old = overrides;
+  overrides = { ...next };
+  applyAppearance(); // l'accent peut changer
+  if (!push) return;
+  sendConfig();
+  // Comme un changement de réglage : les modules qui lisent `eff` se mettent à jour (paroles, voix…).
+  for (const key of new Set([...Object.keys(old), ...Object.keys(overrides)])) {
+    if (old[key] !== overrides[key]) listeners.forEach((fn) => fn(key, eff(key)));
+  }
+}
 
 function sendConfig() {
   send('config', [
     `mode=${settings.mode}`, `revealDelay=${settings.revealDelay}`, `hideDelay=${settings.hideDelay}`,
     `width=${settings.width}`, `panelH=${settings.panelH}`, `theme=${settings.theme}`,
-    `sound=${settings.sound ? 1 : 0}`, `autostart=${settings.autostart ? 1 : 0}`,
-    `fullscreenReveal=${settings.fullscreenReveal ? 1 : 0}`, `voiceWake=${settings.voiceWake ? 1 : 0}`, `voiceModel=${settings.voiceModel}`,
+    `sound=${eff('sound') ? 1 : 0}`, `autostart=${settings.autostart ? 1 : 0}`,
+    `fullscreenReveal=${settings.fullscreenReveal ? 1 : 0}`, `voiceWake=${eff('voiceWake') ? 1 : 0}`, `voiceModel=${settings.voiceModel}`,
     // Le natif garde la page éveillée pendant une lecture : elle seule demande le mini-dock et la carte musique.
-    `miniLyrics=${(settings.lyricsOpen && settings.miniLyrics) || settings.musicReveal ? 1 : 0}`,
+    `miniLyrics=${(settings.lyricsOpen && eff('miniLyrics')) || eff('musicReveal') ? 1 : 0}`,
   ].join('\n'));
 }
 
@@ -57,7 +76,7 @@ function applyAppearance() {
   b.classList.toggle('theme-light', settings.theme === 'light');
   b.classList.toggle('reduce', !!settings.reduceMotion);
   b.classList.toggle('tint-music', !!settings.musicTint); // couleurs du dock = pochette (music.css)
-  const [a, a2] = ACCENTS[settings.accent] || ACCENTS.violet;
+  const [a, a2] = ACCENTS[eff('accent')] || ACCENTS.violet; // un mode peut imposer sa couleur
   const root = document.documentElement.style;
   root.setProperty('--accent', a);
   root.setProperty('--accent2', a2);
@@ -180,4 +199,4 @@ function setupSettings() {
   $('#quitBtn').addEventListener('click', () => send('quit'));
 }
 
-export { settings, apiModel, setSetting, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange };
+export { settings, ACCENTS, eff, setOverrides, apiModel, setSetting, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange };

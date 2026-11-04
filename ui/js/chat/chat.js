@@ -218,10 +218,13 @@ function toolHTML(b, res, live) {
     ic = 'globe';
     title = state('Page ouverte', 'Ouverture de la page…', 'Page non ouverte');
     detail = inp.url || '';
-  } else if (b.name === 'run_routine') {
+  } else if (b.name === 'start_mode' || b.name === 'run_routine') {
     ic = 'routine';
-    title = state('Routine lancée', 'Lancement de la routine…', 'Routine non lancée');
+    title = state('Mode démarré', 'Démarrage du mode…', 'Mode non démarré');
     detail = inp.name || '';
+  } else if (b.name === 'stop_mode') {
+    ic = 'stop';
+    title = state('Mode arrêté', 'Arrêt du mode…', 'Mode non arrêté');
   } else {
     ic = 'clock';
     title = state('Rappels consultés', 'Consultation des rappels…', 'Consultation impossible');

@@ -22,6 +22,7 @@
 #include <cstring>
 #include <ctime>
 #include <filesystem>
+#include <fstream>
 #include <mutex>
 #include <set>
 #include <thread>
@@ -353,6 +354,51 @@ void RunRoutine(const std::string& steps) {
             }
         }
     }).detach();
+}
+
+// ------------------------------------------------------------------ applis qui déclenchent un mode
+
+static std::set<std::string> g_watch;   // noms de processus surveillés, en minuscules (thread de l'interface seulement)
+static std::set<std::string> g_running; // parmi eux, ceux qui tournaient au dernier relevé
+
+// Un processus correspond par son nom court (/proc/<pid>/comm, 15 caractères au plus) ou par celui de son exécutable.
+static std::set<std::string> RunningWatched() {
+    std::set<std::string> out;
+    std::error_code ec;
+    for (fs::directory_iterator it("/proc", ec), end; !ec && it != end; it.increment(ec)) {
+        const std::string pid = it->path().filename().string();
+        if (pid.empty() || !std::all_of(pid.begin(), pid.end(), [](unsigned char c) { return std::isdigit(c) != 0; })) continue;
+        std::string comm;
+        std::getline(std::ifstream("/proc/" + pid + "/comm"), comm);
+        comm = Lower(comm);
+        std::string exe;
+        std::error_code lec;
+        fs::path link = fs::read_symlink("/proc/" + pid + "/exe", lec); // illisible pour les processus d'un autre utilisateur
+        if (!lec) exe = Lower(link.filename().string());
+        for (const auto& w : g_watch)
+            if (comm == w || exe == w || (w.size() > 15 && comm == w.substr(0, 15))) out.insert(w);
+    }
+    return out;
+}
+
+void WatchApps(const std::string& names) {
+    g_watch.clear();
+    for (const auto& line : util::Split(names, '\n')) {
+        std::string n = Lower(line);
+        while (!n.empty() && (n.back() == '\r' || n.back() == ' ')) n.pop_back();
+        if (n.empty() || n.size() > 128 || g_watch.size() >= 64) continue;
+        if (n.find('/') != std::string::npos) continue; // un nom seulement, jamais un chemin
+        g_watch.insert(n);
+    }
+    g_running = RunningWatched(); // ce qui tourne déjà ne déclenche rien
+}
+
+void CheckApps() {
+    if (g_watch.empty()) return;
+    std::set<std::string> now = RunningWatched();
+    for (const auto& n : now)
+        if (!g_running.count(n)) bridge::PostToPage("{\"t\":\"appstart\",\"app\":" + util::Json(n) + "}");
+    g_running = std::move(now);
 }
 
 // Sortie audio par défaut : PipeWire/WirePlumber (wpctl), à défaut PulseAudio (pactl).

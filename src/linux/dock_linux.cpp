@@ -9,6 +9,7 @@
 #include "app/tray.h"
 #include "common/util.h"
 #include "features/media.h"
+#include "features/pc.h"
 #include "features/reminders.h"
 #include "features/voice.h"
 #include "linux/host.h"
@@ -600,6 +601,7 @@ void Init(void* window, void* layout, void* view) {
     g_timeout_add(30, Poll, nullptr);
     g_timeout_add_seconds(1, +[](gpointer) -> gboolean {
         reminders::Check(); // échéances des rappels et du minuteur
+        pc::CheckApps();    // applis qui déclenchent un mode
         return G_SOURCE_CONTINUE;
     }, nullptr);
 }
