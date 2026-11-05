@@ -2,7 +2,7 @@
 import { uid } from '../core/util.js';
 import { bridge, send, http } from '../core/bridge.js';
 import { settings } from '../core/settings.js';
-import { convo, turn, handleEvent, rollback, endTurn, setStreaming, scheduleLive } from './chat.js';
+import { convo, turn, handleEvent, rollback, endTurn, setStreaming, renderChat, scheduleLive } from './chat.js';
 import { ACTION_RE, stripActions, buildSystem } from './prompts.js';
 import { execTool } from './tools.js';
 import { parseDuration } from '../features/timer.js';
@@ -19,8 +19,9 @@ function ccStep(prompt) {
   if (!bridge) {
     setTimeout(() => http.onError(id, -2, "Aperçu navigateur : Claude Code n'est disponible que dans l'application."), 300);
   } else {
-    // Champ « outils » : seule la recherche web est possible (le natif ne connaît que « web » ou rien).
-    send('cc', [id, settings.ccModel, settings.effort, convo.ccSession || '', settings.webSearch ? 'web' : '', buildSystem('pro'), prompt].map(clean).join('\x1f'));
+    // Champ « outils » : recherche web et lecture des captures d'écran seulement (le natif ne connaît que « web » et « screen »).
+    const tools = [settings.webSearch && 'web', settings.screenAccess && 'screen'].filter(Boolean).join(',');
+    send('cc', [id, settings.ccModel, settings.effort, convo.ccSession || '', tools, buildSystem('pro'), prompt].map(clean).join('\x1f'));
   }
   setStreaming(true);
 }
@@ -76,7 +77,13 @@ async function onCcDone(cancelled, info) {
   if (!res || res.is_error) { rollback(ccErrorText(res, info), true); return; } // quota, connexion… : secours gratuit
   if (!blocks.some((b) => b.type === 'text') && res.result) blocks.push({ type: 'text', text: res.result });
   if (!blocks.length) { rollback('Réponse vide, réessaie.'); return; }
-  await commitCcAnswer(blocks);
+  const shot = await commitCcAnswer(blocks);
+  if (shot && turn.loops < 2) { // une seule capture par demande, plus une de reprise au plus
+    turn.loops++;
+    renderChat();
+    ccStep(`[Capture d'écran prise : ${shot}. Lis ce fichier avec l'outil Read, puis réponds à la demande de l'utilisateur. Ne prends pas d'autre capture.]`);
+    return;
+  }
   endTurn();
 }
 
@@ -95,6 +102,7 @@ function actionToTool(kind, body) {
   }
   if (kind === 'ouvrir') return ['open_file', { number: parseInt(body, 10) }];
   if (kind === 'site') return ['open_url', { url: body.trim() }];
+  if (kind === 'ecran') return ['screenshot', {}];
   if (kind === 'mode' || kind === 'routine') { // routine : ancien nom de la ligne
     return /^(stop|arr[eêè]t(er)?|fin)$/i.test(body.trim()) ? ['stop_mode', {}] : ['start_mode', { name: body.trim() }];
   }
@@ -126,6 +134,8 @@ async function commitCcAnswer(blocks) {
   }
   convo.messages.push({ role: 'assistant', content });
   if (results.length) convo.messages.push({ role: 'user', content: results });
+  // Capture prise : Claude Code ne voit l'image qu'en la lisant (Read), donc au tour suivant.
+  return results.map((r) => (r.is_error ? '' : String(r.content).match(/screens\/screen-\d+\.jpg/)?.[0] || '')).find(Boolean) || '';
 }
 
 export { ccStep };

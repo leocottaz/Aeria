@@ -12,6 +12,7 @@
 #include "features/media.h"
 #include "features/pc.h"
 #include "features/reminders.h"
+#include "features/screen.h"
 #include "features/updater.h"
 #include "features/voice.h"
 #include "linux/host.h"
@@ -146,6 +147,9 @@ void HandleMessage(const std::string& msg) {
         pc::WatchApps(arg);
     } else if (cmd == "volume") {
         pc::SetVolume(std::atoi(arg.c_str()));
+    } else if (cmd == "screenshot") { // id \n data|file
+        auto f = util::Split(arg, '\n', 2);
+        if (!f.empty() && !f[0].empty()) screen::Capture(f[0], f.size() > 1 && f[1] == "file");
     } else if (cmd == "pickfile") {
         pc::PickFile(arg);
     }

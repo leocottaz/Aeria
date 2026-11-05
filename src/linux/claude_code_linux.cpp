@@ -152,13 +152,18 @@ void RunChat(std::shared_ptr<ProcJob> pj, std::vector<std::string> f) {
         bridge::PostToPage("{\"t\":\"error\",\"id\":" + id + ",\"status\":-3,\"body\":\"Claude Code est introuvable.\"}");
     } else {
         // Aucun outil (fichiers, commandes, MCP) : Claude Code sert uniquement à discuter. Seule exception, voulue par la
-        // page (champ « outils » = web) : la recherche sur internet, sans lecture de page ni accès au PC.
-        const bool web = f[4] == "web";
+        // page (champ « outils », liste séparée par des virgules) : « web » = la recherche sur internet (sans lecture de
+        // page), « screen » = lire les captures d'écran du dossier screens/ (Read, rien d'autre). Le reste est ignoré.
+        const std::string& wanted = f[4];
+        const bool web = ("," + wanted + ",").find(",web,") != std::string::npos;
+        const bool screen = ("," + wanted + ",").find(",screen,") != std::string::npos;
+        const char* tools = web && screen ? "WebSearch,Read" : web ? "WebSearch" : screen ? "Read" : "";
         std::vector<std::string> args = {"-p", "--output-format", "stream-json", "--verbose",
-                                         "--include-partial-messages", "--tools", web ? "WebSearch" : "", "--disallowedTools",
+                                         "--include-partial-messages", "--tools", tools, "--disallowedTools",
                                          "mcp__*", "--strict-mcp-config", "--disable-slash-commands",
                                          "--system-prompt", f[5]};
         if (web) args.insert(args.end(), {"--allowedTools", "WebSearch"});
+        if (screen) args.insert(args.end(), {"--allowedTools", "Read(./screens/**)"}); // le dossier de travail ne contient que ça
         if (!f[1].empty() && f[1] != "default") args.insert(args.end(), {"--model", f[1]});
         if (!f[2].empty()) args.insert(args.end(), {"--effort", f[2]});
         if (!f[3].empty()) args.insert(args.end(), {"--resume", f[3]});

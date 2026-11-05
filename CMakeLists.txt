@@ -44,6 +44,7 @@ add_executable(Aeria WIN32
         src/features/reminders.cpp      # échéances des rappels et du minuteur
         src/features/media.cpp          # lecteur : musique en cours via Windows
         src/features/pc.cpp             # recherche de fichiers, routines, volume
+        src/features/screen.cpp         # capture d'écran (sans le dock) pour l'assistante
         src/features/updater.cpp        # mise à jour : télécharge, vérifie et lance Setup.exe
         src/features/updater_common.cpp # version, tag, SHA256SUMS (partagé avec Linux)
         src/features/voice.cpp          # commande vocale « Aeria » (partagé avec Linux)
@@ -58,7 +59,7 @@ target_include_directories(Aeria PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_
 target_compile_definitions(Aeria PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _WIN32_WINNT=0x0A00
         AERIA_VERSION_STR="${AERIA_VERSION_NUM}")
 include(cmake/whisper.cmake)
-target_link_libraries(Aeria PRIVATE whisper winmm bcrypt dwmapi winhttp crypt32 shell32 ole32 oleaut32 user32 gdi32 advapi32 shcore runtimeobject comdlg32 uuid)
+target_link_libraries(Aeria PRIVATE whisper winmm bcrypt dwmapi winhttp crypt32 shell32 ole32 oleaut32 user32 gdi32 advapi32 shcore runtimeobject comdlg32 uuid gdiplus)
 
 if (MINGW)
     target_compile_options(Aeria PRIVATE -municode -Wno-unknown-pragmas)

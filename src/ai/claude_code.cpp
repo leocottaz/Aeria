@@ -178,13 +178,18 @@ void RunChat(std::shared_ptr<ProcJob> pj, std::vector<std::string> f) {
         bridge::PostToPage("{\"t\":\"error\",\"id\":" + id + ",\"status\":-3,\"body\":\"Claude Code est introuvable.\"}");
     } else {
         // Aucun outil (fichiers, commandes, MCP) : Claude Code sert uniquement à discuter. Seule exception, voulue par la
-        // page (champ « outils » = web) : la recherche sur internet, sans lecture de page ni accès au PC.
-        const bool web = f[4] == "web";
+        // page (champ « outils », liste séparée par des virgules) : « web » = la recherche sur internet (sans lecture de
+        // page), « screen » = lire les captures d'écran du dossier screens/ (Read, rien d'autre). Le reste est ignoré.
+        const std::string& wanted = f[4];
+        const bool web = ("," + wanted + ",").find(",web,") != std::string::npos;
+        const bool screen = ("," + wanted + ",").find(",screen,") != std::string::npos;
+        std::wstring tools = web && screen ? L"WebSearch,Read" : web ? L"WebSearch" : screen ? L"Read" : L"";
         std::vector<std::wstring> args = {L"-p", L"--output-format", L"stream-json", L"--verbose",
-                                          L"--include-partial-messages", L"--tools", web ? L"WebSearch" : L"", L"--disallowedTools",
+                                          L"--include-partial-messages", L"--tools", tools, L"--disallowedTools",
                                           L"mcp__*", L"--strict-mcp-config", L"--disable-slash-commands",
                                           L"--system-prompt", util::Widen(f[5])};
         if (web) args.insert(args.end(), {L"--allowedTools", L"WebSearch"});
+        if (screen) args.insert(args.end(), {L"--allowedTools", L"Read(./screens/**)"}); // le dossier de travail ne contient que ça
         if (!f[1].empty() && f[1] != "default") args.insert(args.end(), {L"--model", util::Widen(f[1])});
         if (!f[2].empty()) args.insert(args.end(), {L"--effort", util::Widen(f[2])});
         if (!f[3].empty()) args.insert(args.end(), {L"--resume", util::Widen(f[3])});

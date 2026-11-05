@@ -7,7 +7,7 @@
 
 namespace claude_code {
 
-// payload : id \x1f modèle \x1f effort \x1f session à reprendre \x1f outils ("web" ou vide) \x1f prompt système \x1f message
+// payload : id \x1f modèle \x1f effort \x1f session à reprendre \x1f outils ("web", "screen", les deux séparés par une virgule, ou vide) \x1f prompt système \x1f message
 void StartChat(const std::string& payload);
 bool Cancel(const std::string& id); // false si l'id est inconnu
 

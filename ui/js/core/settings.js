@@ -18,6 +18,7 @@ const DEFAULTS = {
   category: 'claude', claudeMode: 'pro', // catégorie de connexion (Claude, ChatGPT, Gratuit) ; claudeMode = dernier mode Claude
   freeService: 'gemini', freeModel: '', freeFallback: false, // modèle gratuit ('' = automatique)
   webSearch: true, // Claude (Pro et Clé API) peut chercher sur internet
+  screenAccess: true, // Claude (Pro et Clé API) peut regarder l'écran quand la demande l'exige
   musicSource: 'deezer', musicReveal: true, lyricsOpen: true, miniLyrics: true, musicTint: true,
   timerPill: false, // temps du minuteur dans le mini-dock
   voiceWake: false, // dire « Aeria » ouvre le dock (micro écouté hors ligne par le natif)
@@ -157,6 +158,8 @@ function renderSettings() {
   $('#claudeModeField').hidden = !claude;
   $('#freeFallbackRow').hidden = !claude; // le secours n'a de sens qu'avec Claude
   $('#webSearchRow').hidden = !claude || settings.backend === 'free'; // seulement Claude (Pro, Clé API) sait chercher
+  $('#screenRow').hidden = settings.backend === 'free' ? settings.freeService === 'groq' : !(claude || settings.backend === 'chatgpt'); // regarder l'écran : pas avec Groq (pas d'images)
+  $('#screenNote').hidden = $('#screenRow').hidden;
   $('#freeFields').hidden = claude && !settings.freeFallback;
   $('#freeServiceField').hidden = settings.category === 'chatgpt';
   $('#chatgptKeyLabel').hidden = settings.category !== 'chatgpt';
@@ -199,4 +202,9 @@ function setupSettings() {
   $('#quitBtn').addEventListener('click', () => send('quit'));
 }
 
-export { settings, ACCENTS, eff, setOverrides, apiModel, setSetting, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange };
+// Aeria peut-elle regarder l'écran avec ce mode de connexion ? La capture part en image : Claude (Pro, Clé API),
+// Gemini et OpenAI la lisent, pas Groq. `backend` : 'pro', 'api', 'free' (Gemini ou Groq) ou 'chatgpt'.
+const screenCapable = (backend = settings.backend) => settings.screenAccess
+  && (backend === 'pro' || backend === 'api' || backend === 'chatgpt' || (backend === 'free' && settings.freeService !== 'groq'));
+
+export { settings, ACCENTS, eff, setOverrides, apiModel, setSetting, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange, screenCapable };

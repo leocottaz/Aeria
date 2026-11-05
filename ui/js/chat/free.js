@@ -74,7 +74,8 @@ const knownModels = (svc = service()) => models[svc] || [];
 
 // ------------------------------------------------------------------ conversion
 
-const toolsForOpenAI = () => TOOLS.map((t) => ({
+// Capture d'écran : seulement pour les services qui lisent les images (pas Groq), si l'utilisateur l'autorise.
+const toolsForOpenAI = () => TOOLS.filter((t) => t.name !== 'screenshot' || (settings.screenAccess && service() !== 'groq')).map((t) => ({
   type: 'function',
   function: { name: t.name, description: t.description, parameters: stripSchema(t.input_schema) },
 }));
@@ -93,8 +94,17 @@ function toOpenAI(messages) {
   for (const m of messages) {
     const content = Array.isArray(m.content) ? m.content : [];
     if (m.role === 'user') {
+      const shots = []; // une réponse d'outil OpenAI ne peut pas contenir d'image : elle suit dans un message de l'utilisateur
       for (const r of content.filter((c) => c.type === 'tool_result')) {
-        out.push({ role: 'tool', tool_call_id: r.tool_use_id, content: typeof r.content === 'string' ? r.content : JSON.stringify(r.content) });
+        const parts = Array.isArray(r.content) ? r.content : [];
+        const seen = service() === 'groq' ? [] : parts.filter((x) => x.type === 'image');
+        shots.push(...seen);
+        out.push({ role: 'tool', tool_call_id: r.tool_use_id, content: typeof r.content === 'string' ? r.content : parts.length
+          ? parts.map((x) => (x.type === 'text' ? x.text : seen.includes(x) ? '(image ci-dessous)' : '[image non transmise]')).join('\n') : JSON.stringify(r.content) });
+      }
+      if (shots.length) {
+        out.push({ role: 'user', content: [{ type: 'text', text: 'Capture d’écran demandée (résultat de l’outil screenshot) :' },
+          ...shots.map((c) => ({ type: 'image_url', image_url: { url: `data:${c.source.media_type};base64,${c.source.data}` } }))] });
       }
       let text = content.filter((c) => c.type === 'text').map((c) => c.text).join('\n');
       // Images : Gemini et OpenAI les lisent (image_url) ; Groq et les PDF, non (jamais lus par ces modèles).

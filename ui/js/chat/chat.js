@@ -9,6 +9,7 @@ import { renderKey, updateNoKey } from './connection.js';
 import { switchTab, openTab } from '../dock/dock.js';
 import { contextBlock, remindersContext, todosContext, stripActions } from './prompts.js';
 import { foundFor, foundContext, openPath, folderOf, fmtDay } from '../features/files.js';
+import { shotFor } from '../features/screen.js';
 import { md } from './markdown.js';
 import { streamStep } from './api.js';
 import { ccStep } from './pro.js';
@@ -22,9 +23,16 @@ const newConvo = () => ({ id: uid(), backend: settings.backend, messages: [], cr
 let convo = store.get('convo', null) || newConvo();
 // Images et PDF ne sont pas gardés dans le stockage local (voir forStorage dans attach.js).
 // Les résultats de recherche de l'API (contenu chiffré, volumineux) et les citations ne sont pas gardés non plus.
-const slim = (m) => (m.role === 'assistant' && m.content.some((c) => c.type === 'server_tool_use' || c.type === 'web_search_tool_result' || c.citations)
-  ? { ...m, content: m.content.filter((c) => c.type !== 'server_tool_use' && c.type !== 'web_search_tool_result').map(({ citations, ...c }) => c) }
-  : m);
+// Les captures d'écran (résultat de l'outil screenshot) ne sont jamais écrites sur le disque : elles montrent l'écran.
+const hasImage = (c) => Array.isArray(c.content) && c.content.some((x) => x.type === 'image');
+const slim = (m) => {
+  if (m.role === 'user' && Array.isArray(m.content) && m.content.some(hasImage)) {
+    return { ...m, content: m.content.map((c) => (hasImage(c) ? { ...c, content: '[capture d\'écran non conservée]' } : c)) };
+  }
+  return m.role === 'assistant' && m.content.some((c) => c.type === 'server_tool_use' || c.type === 'web_search_tool_result' || c.citations)
+    ? { ...m, content: m.content.filter((c) => c.type !== 'server_tool_use' && c.type !== 'web_search_tool_result').map(({ citations, ...c }) => c) }
+    : m;
+};
 const saveConvo = () => store.set('convo', { ...convo, messages: convo.messages.map((m) => forStorage(slim(m))) });
 let turn = null;      // tour en cours : { reqId, blocks, stop, startLen, userText, loops, ... }
 let chatNotice = null;
@@ -218,6 +226,11 @@ function toolHTML(b, res, live) {
     ic = 'globe';
     title = state('Page ouverte', 'Ouverture de la page…', 'Page non ouverte');
     detail = inp.url || '';
+  } else if (b.name === 'screenshot') {
+    ic = 'monitor';
+    title = state("Écran regardé", "Capture de l'écran…", 'Capture impossible');
+    const img = res && !err ? shotFor(b.id) : '';
+    if (img) return `<div class="tool shot-card">${icon(ic)}<div><b>${title}</b><img class="shot" src="${img}" alt="Capture envoyée à Aeria"></div>${icon('check', 'ok')}</div>`;
   } else if (b.name === 'start_mode' || b.name === 'run_routine') {
     ic = 'routine';
     title = state('Mode démarré', 'Démarrage du mode…', 'Mode non démarré');
@@ -271,7 +284,8 @@ function groupBlocksHTML(blocks, results, live) {
       html += `<div class="md${live && b === last ? ' streaming' : ''}">${md(shown)}</div>`;
     } else if (b.type === 'server_tool_use' || (b.type === 'tool_use' && b.name === 'WebSearch')) {
       html += searchHTML(b, visible, live);
-    } else if (b.type === 'tool_use') html += toolHTML(b, results[b.id], live);
+    } else if (b.type === 'tool_use' && b.name === 'Read') continue; // Claude Code lit la capture d'écran (mode Pro) : rien à montrer
+    else if (b.type === 'tool_use') html += toolHTML(b, results[b.id], live);
     else if (b.type === 'fallback') html += `<div class="note-fallback">Réponse poursuivie par ${esc(b.to?.model || 'un autre modèle')}</div>`;
   }
   const busy = live && (!last || (last._complete && last.type !== 'tool_use') || (last.type === 'tool_use' && results[last.id]));

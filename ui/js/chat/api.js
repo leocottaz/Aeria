@@ -23,7 +23,7 @@ function streamStep() {
     output_config: { effort: settings.effort },
     cache_control: { type: 'ephemeral' },
     system: buildSystem('api'),
-    tools: settings.webSearch ? [...TOOLS, WEB_SEARCH_TOOL] : TOOLS,
+    tools: [...TOOLS.filter((t) => t.name !== 'screenshot' || settings.screenAccess), ...(settings.webSearch ? [WEB_SEARCH_TOOL] : [])],
     messages: convo.messages.map(({ role, content }) => ({ role, content })), // sans nos champs (via)
   };
   // Repli automatique côté serveur si le modèle décline (pas disponible pour Haiku).

@@ -224,3 +224,6 @@ details.think[open] summary .ic { rotate: 180deg; }
 .drop-hint .ic { width: 16px; height: 16px; }
 body.dropping .drop-hint { opacity: 1; transform: translate(-50%, 0); }
 body.dropping .chat-composer { border-color: color-mix(in srgb, var(--accent) 55%, transparent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent), 0 0 30px -10px var(--accent); }
+
+/* Capture d'écran envoyée à Aeria : miniature dans la carte (jamais enregistrée). */
+.tool .shot { display: block; width: min(260px, 100%); margin-top: 6px; border: 1px solid var(--stroke); border-radius: 8px; }

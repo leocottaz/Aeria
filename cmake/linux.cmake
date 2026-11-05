@@ -20,6 +20,7 @@ add_executable(Aeria
         src/linux/tray_linux.cpp            # notifications D-Bus
         src/linux/media_linux.cpp           # lecteur : MPRIS2
         src/linux/pc_linux.cpp              # fichiers, routines, volume
+        src/linux/screen_linux.cpp          # capture d'écran (X11) pour l'assistante
         src/features/reminders.cpp          # échéances des rappels et du minuteur (partagé avec Windows)
         src/features/updater_common.cpp     # version et vérification des mises à jour (partagé avec Windows)
         src/features/voice.cpp              # commande vocale « Aeria » (partagé avec Windows)
