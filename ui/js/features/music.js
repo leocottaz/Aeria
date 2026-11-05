@@ -71,7 +71,7 @@ function onMedia(m) {
   if (changed && isPlaying() && eff('musicReveal')) { // un mode peut le couper (modes.js)
     const w = cardWidth();
     document.documentElement.style.setProperty('--mcard-w', `${w}px`);
-    send('revealmusic', '4500', String(w));
+    send('revealmusic', '3000', String(w));
   }
   ensureLoop();
 }

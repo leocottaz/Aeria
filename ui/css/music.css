@@ -87,6 +87,7 @@
   gap: 6px;
   width: var(--mcard-w);
   height: var(--mcard-h);
+  z-index: 30; /* au-dessus de la barre (invisible, mais posée au même endroit : son champ « Demander » captait les clics des boutons) */
   padding: 0 12px 0 10px;
   border-radius: 0 0 18px 18px; /* = bas du verre (.ambient) : la teinte ne dépasse pas de ses coins */
   background: linear-gradient(110deg, color-mix(in srgb, var(--m-tint) 34%, transparent), transparent 75%);
