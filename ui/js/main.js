@@ -1,7 +1,7 @@
 // Point d'entrée : branche les modules et route les messages du natif.
 import { $, store, toast, hydrateIcons } from './core/util.js';
 import { bridge, send, http, onReply } from './core/bridge.js';
-import { settings, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange } from './core/settings.js';
+import { settings, adoptNative, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange } from './core/settings.js';
 import { S } from './core/state.js';
 import { checkClaudeCode, renderCc, renderKey, renderFree, testFree, onFreeKey, setupConnection } from './chat/connection.js';
 import { knownModels } from './chat/free.js';
@@ -23,12 +23,7 @@ function onNative(m) {
     case 'init':
       S.hasKey = m.hasKey;
       S.keyHint = m.keyHint;
-      // Réglages gardés côté natif : c'est lui qui fait foi. Sous Linux, lowMemory ne vit que dans la page.
-      if (settings.autostart !== m.autostart || (m.lowMemory !== undefined && settings.lowMemory !== m.lowMemory)) {
-        settings.autostart = m.autostart;
-        settings.lowMemory = m.lowMemory ?? settings.lowMemory;
-        store.set('settings', settings);
-      }
+      adoptNative(m); // réglages : settings.json (natif) fait foi, voir settings.js
       S.freeKeys = m.freeKeys || {};
       renderKey();
       renderFree();
@@ -52,6 +47,7 @@ function onNative(m) {
       else toast("Impossible d'enregistrer la clé");
       break;
     case 'freekey': onFreeKey(m); break;
+    case 'storefail': toast("Impossible d'enregistrer vos données sur le disque"); break; // disque plein, dossier protégé…
     case 'chunk': http.onChunk(m.id, m.data); break;
     case 'done': http.onDone(m.id, !!m.cancelled, m); break;
     case 'ccstatus':

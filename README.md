@@ -109,6 +109,7 @@ installer/           windows/aeria.iss (Inno Setup), linux/ (entrée de menu .de
 ui/                  interface (copiée à côté de l'exe à chaque build)
   index.html
   css/               base.css, puis un fichier par zone
+  js/boot.js         charge les données du natif, puis lance main.js
   js/main.js         démarrage + routeur des messages du natif
   js/core/           pont avec le natif, état, réglages, utilitaires
   js/dock/           états visuels, onglets, mini-dock

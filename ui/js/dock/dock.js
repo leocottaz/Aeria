@@ -1,7 +1,7 @@
 // États du dock (masqué, languette, barre, panneau), onglets, horloge, barre et raccourcis.
-import { $, $$, store } from '../core/util.js';
+import { $, $$ } from '../core/util.js';
 import { send } from '../core/bridge.js';
-import { settings, openSettingsPage } from '../core/settings.js';
+import { settings, saveSettings, openSettingsPage } from '../core/settings.js';
 import { S } from '../core/state.js';
 import { fmtTime } from '../core/format.js';
 import { reminders, upcomingReminders, renderReminders, hasPendingReminders } from '../features/reminders.js';
@@ -62,7 +62,7 @@ function switchTab(tab) {
   const changed = tab !== S.tab;
   S.tab = tab;
   settings.lastTab = tab;
-  store.set('settings', settings);
+  saveSettings();
   $$('.view').forEach((v) => v.classList.toggle('active', v.dataset.view === tab));
   $$('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.tab === navOf(tab)));
   moveNav(changed);

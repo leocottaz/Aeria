@@ -53,7 +53,8 @@ add_executable(Aeria WIN32
 
         # common/ : utilitaires partagés
         src/common/util.cpp
-        src/common/util_common.cpp)
+        src/common/util_common.cpp
+        src/common/data_store.cpp)
 set_source_files_properties(src/app/aeria.rc PROPERTIES OBJECT_DEPENDS ${CMAKE_SOURCE_DIR}/src/app/aeria.ico)
 
 target_include_directories(Aeria PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/webview2/include)

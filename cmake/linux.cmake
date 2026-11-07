@@ -27,7 +27,8 @@ add_executable(Aeria
         src/features/voice.cpp              # commande vocale « Aeria » (partagé avec Windows)
         src/linux/voice_linux.cpp           # micro (parec / arecord) et téléchargement du modèle
         src/linux/updater_linux.cpp         # pas d'installation automatique sous Linux
-        src/common/util_common.cpp)
+        src/common/util_common.cpp
+        src/common/data_store.cpp)
 target_include_directories(Aeria PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(Aeria PRIVATE AERIA_VERSION_STR="${AERIA_VERSION_NUM}")
 include(cmake/whisper.cmake)

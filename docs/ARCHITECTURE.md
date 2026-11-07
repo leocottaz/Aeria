@@ -71,10 +71,11 @@ Les threads réseau et processus ne touchent jamais la fenêtre ni WebView2 : il
 
 ## Interface (`ui/`)
 
-Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe ni étape de build. Chaque module de fonctionnalité exporte `setupX()` (branche les évènements, appelé une fois par `main.js`) et `renderX()` (redessine).
+Modules ES (`<script type="module" src="js/boot.js">`, qui charge d'abord les données du natif puis importe `main.js`), sans dépendance externe ni étape de build. Chaque module de fonctionnalité exporte `setupX()` (branche les évènements, appelé une fois par `main.js`) et `renderX()` (redessine).
 
 | Fichier | Rôle |
 | --- | --- |
+| `js/boot.js` | Demande les données au natif (`loadstore`), attend le message `store` (8 s au plus), puis importe `main.js` : les modules lisent leurs données dès leur import. |
 | `js/main.js` | Démarrage et routage des messages du natif (`onNative`). |
 | `js/core/bridge.js` | `send(cmd, …args)`, `ask(cmd, args)` (promesse résolue par `{t:"reply"}`), `http` (requêtes en cours par id), messages d'erreur API. |
 | `js/core/state.js` | État partagé `S` (état du dock, onglet, connexion). |
@@ -112,6 +113,8 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | --- | --- | --- |
 | `ready` | — | La page est chargée : le natif répond `init` puis `state`. |
 | `config` | lignes `clé=valeur` | `mode`, `revealDelay`, `hideDelay`, `width`, `panelH`, `theme`, `sound`, `autostart`, `fullscreenReveal` (Windows : le bord haut ouvre le dock devant une appli plein écran), `miniLyrics` (garde la page éveillée, dock caché, pendant une lecture : pilule de paroles ou carte musique). |
+| `loadstore` | — | Démarrage de la page (avant `ready`) : le natif répond `store` avec tous les fichiers de données. |
+| `savestore` | clé, JSON | Écrit `data/<clé>.json` (`common/data_store.*`). Refusé (message `storefail`) si la clé est inconnue, le JSON invalide ou le disque en échec. |
 | `open` / `bar` / `hide` | — | Ouvre le panneau / replie sur la barre / masque. |
 | `pin` | `0`/`1` | Garder affiché. |
 | `hold` | ms | Empêche le repli automatique pendant ms. |
@@ -148,7 +151,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 
 | `t` | Champs | Sens |
 | --- | --- | --- |
-| `init` | `hasKey`, `keyHint`, `autostart`, `lowMemory` (Windows), `freeKeys`, `version`, `canUpdate` | Réponse à `ready`. Sans `lowMemory`, la page garde son réglage. `version` : numéro de l'exécutable (`0.0.0` = build de développement). `canUpdate` : copie installée par `Setup.exe`. |
+| `init` | `hasKey`, `keyHint`, `autostart`, `lowMemory` (Windows), `freeKeys`, `version`, `canUpdate` | Réponse à `ready`. Sans `lowMemory`, la page garde son réglage. `autostart` = clé de démarrage présente **ou** demandé par `settings.json` (`adoptNative`, `settings.js`). Avant `init`, `config` n'envoie pas `autostart`. `version` : numéro de l'exécutable (`0.0.0` = build de développement). `canUpdate` : copie installée par `Setup.exe`. |
 | `update` | `state` (`downloading`, `verifying`, `installing`, `restarting`, `error`), `pct`, `msg` | Avancement d'une mise à jour. Sur `restarting`, la page envoie `quit` : l'installateur relance le dock. |
 | `voice` | `state` (`off`, `nomodel`, `downloading`, `loading`, `idle`, `awake`, `working`, `partial`, `error`, `heard`), `pct`, `msg`, `text`, `models`, `model` | État de l'écoute. `partial` : `text` est ce qu'on dit, transcrit en direct (brouillon). `heard` : `text` est la phrase finale, la page décide quoi en faire (pilule, champ d'un bouton micro, ou conversation). `awake` / `working` : la pilule est ouverte. |
 | `freekey` | `service`, `ok`, `freeKeys` | Résultat de `freekey` / `delfreekey`. |
@@ -172,7 +175,8 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 
 | Quoi | Où |
 | --- | --- |
-| Rappels, to-do, notes, modes, réglages, conversation, dernières recherches de fichiers (clés `aeria.*`) | `localStorage` de WebView2 : `%LOCALAPPDATA%\Aeria\WebView2` |
+| Réglages, rappels, to-do, notes, modes (et mode en cours), minuteur, conversation | Fichiers JSON `%APPDATA%\Aeria\data\<clé>.json` (Linux : `$XDG_DATA_HOME/Aeria/data`) : `settings`, `reminders`, `todos`, `notes`, `modes`, `activeMode`, `timer`, `convo`, `welcomed`, `lastSeenVersion`. Liste dans `kKeys` (`data_store.cpp`) et `FILE_KEYS` (`util.js`), à garder identiques. Écriture atomique ; sauvegarde quotidienne (7 jours) dans `data\backups\` pour réglages, rappels, notes, to-do, conversation, modes ; un fichier abîmé devient `<clé>.corrupt.json` et la dernière sauvegarde valide est reprise. Pas chiffrés (lisibles et modifiables à la main). |
+| Caches et état secondaire (dernières recherches de fichiers, modèles gratuits, paroles introuvables, vérification des mises à jour) | `localStorage` de WebView2 : `%LOCALAPPDATA%\Aeria\WebView2` (clés `aeria.*`). Les anciennes données du `localStorage` sont reprises une fois dans les fichiers au premier démarrage. |
 | Clé API (DPAPI) | `%APPDATA%\Aeria\apikey.bin` |
 | Clés gratuites (DPAPI) | `%APPDATA%\Aeria\geminikey.bin`, `groqkey.bin` |
 | Dossier de travail de Claude Code | `%LOCALAPPDATA%\Aeria\claude-chat` |

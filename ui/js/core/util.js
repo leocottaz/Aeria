@@ -1,4 +1,5 @@
-// Petits outils partagés : sélecteurs, échappement, icônes, stockage local, toast.
+// Petits outils partagés : sélecteurs, échappement, icônes, stockage des données, toast.
+import { send } from './bridge.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -67,15 +68,44 @@ function hydrateIcons(root = document) {
   $$('i[data-icon]', root).forEach((i) => { i.outerHTML = icon(i.dataset.icon, i.className); });
 }
 
+// Données de l'utilisateur : fichiers JSON côté natif (src/common/data_store.cpp, %APPDATA%\Aeria\data), qui font foi.
+// Elles survivent aux mises à jour et à une réinitialisation du profil du navigateur, contrairement au localStorage.
+// À garder identique à `kKeys` du natif. Les autres clés (caches, état de la vérification des mises à jour…)
+// restent dans le localStorage : les perdre ne coûte rien.
+const FILE_KEYS = new Set(['settings', 'reminders', 'notes', 'todos', 'convo', 'modes', 'activeMode', 'timer', 'welcomed', 'lastSeenVersion']);
+let fileMode = false; // vrai une fois les fichiers reçus du natif (js/boot.js) ; faux dans l'aperçu navigateur
+const fileText = {};  // clé → texte JSON, comme le renvoie le natif
+
+const lsGet = (key) => { try { return localStorage.getItem('aeria.' + key); } catch { return null; } };
+
+// Appelé une fois par boot.js avant le démarrage des modules. `data` : { clé: texte JSON } du natif, ou null s'il n'a pas répondu.
+// Une clé absente des fichiers mais présente dans le localStorage (données d'avant les fichiers) est reprise puis enregistrée.
+function loadFileStore(data) {
+  if (!data || typeof data !== 'object') return; // natif muet : on reste sur le localStorage, rien n'est écrit
+  fileMode = true;
+  for (const key of FILE_KEYS) {
+    if (typeof data[key] === 'string' && data[key]) { fileText[key] = data[key]; continue; }
+    const old = lsGet(key);
+    if (old != null) { fileText[key] = old; send('savestore', key, old); } // migration unique
+  }
+}
+
 const store = {
   get(key, fallback) {
     try {
-      const v = localStorage.getItem('aeria.' + key);
+      const v = fileMode && FILE_KEYS.has(key) ? fileText[key] : lsGet(key);
       return v == null ? fallback : JSON.parse(v);
     } catch { return fallback; }
   },
   set(key, value) {
-    try { localStorage.setItem('aeria.' + key, JSON.stringify(value)); } catch { /* quota ou stockage indisponible */ }
+    const text = JSON.stringify(value);
+    if (text === undefined) return;
+    if (fileMode && FILE_KEYS.has(key)) {
+      fileText[key] = text;
+      send('savestore', key, text);
+      return;
+    }
+    try { localStorage.setItem('aeria.' + key, text); } catch { /* quota ou stockage indisponible */ }
   },
 };
 
@@ -99,4 +129,4 @@ function animateOut(el, done) {
   setTimeout(done, 340);
 }
 
-export { $, $$, uid, esc, clamp, icon, hydrateIcons, store, toast, autosize, animateOut };
+export { $, $$, uid, esc, clamp, icon, hydrateIcons, store, loadFileStore, toast, autosize, animateOut };

@@ -8,6 +8,7 @@
 #include "app/autostart.h"
 #include "app/dock.h"
 #include "app/tray.h"
+#include "common/data_store.h"
 #include "common/util.h"
 #include "features/appnotifs.h"
 #include "features/media.h"
@@ -59,6 +60,11 @@ void HandleMessage(const std::string& msg) {
                    "," + api_key::FreeStatusJson() + ",\"version\":" + util::Json(updater::Version()) +
                    ",\"canUpdate\":" + (updater::CanSelfUpdate() ? "true" : "false") + "}");
         dock::OnPageReady();
+    } else if (cmd == "loadstore") { // la page démarre : toutes les données enregistrées (common/data_store.h)
+        PostToPage("{\"t\":\"store\",\"data\":" + data_store::LoadAllJson() + "}");
+    } else if (cmd == "savestore") { // clé \n JSON
+        auto f = util::Split(arg, '\n', 2);
+        if (f.size() != 2 || !data_store::Save(f[0], f[1])) PostToPage("{\"t\":\"storefail\",\"key\":" + util::Json(f.empty() ? "" : f[0]) + "}");
     } else if (cmd == "config") {
         dock::ApplyConfig(arg);
     } else if (cmd == "lowmem") {

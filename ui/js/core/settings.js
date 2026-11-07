@@ -38,11 +38,47 @@ const CC_MODEL_NAMES = { default: 'modèle par défaut', opus: 'Opus', sonnet: '
 const EFFORT_NAMES = { low: 'rapide', medium: 'équilibrée', high: 'approfondie' };
 const FREE_NAMES = { gemini: 'Gemini', groq: 'Groq', openai: 'OpenAI' };
 
-let settings = { ...DEFAULTS, ...store.get('settings', {}) };
-// La catégorie se déduit du mode enregistré (réglages d'avant les catégories).
-settings.category = settings.backend === 'free' ? 'free' : settings.backend === 'chatgpt' ? 'chatgpt' : 'claude';
-if (settings.category === 'claude') settings.claudeMode = settings.backend;
-if (settings.settingsPage === 'routines') settings.settingsPage = 'modes'; // la page « Routines » est devenue « Modes »
+// Les réglages sont lus dans settings.json (côté natif, voir `store` dans util.js) avant le démarrage des modules.
+// On n'accepte que des clés connues, du bon type : un fichier modifié à la main ne doit rien casser.
+function mergeSaved(saved) {
+  const out = { ...DEFAULTS };
+  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return out;
+  for (const [k, v] of Object.entries(saved)) {
+    if (k === '__proto__' || !(k in DEFAULTS)) continue;
+    if (typeof v === typeof DEFAULTS[k]) out[k] = v;
+  }
+  return out;
+}
+let settings = mergeSaved(store.get('settings', {}));
+// Faux tant que le natif n'a pas répondu à « ready » : `config` n'envoie alors pas `autostart`, sinon la valeur
+// par défaut effacerait la clé de démarrage réelle (c'était la cause du démarrage automatique qui se décochait).
+let synced = false;
+
+function normalizeSettings() {
+  // La catégorie se déduit du mode enregistré (réglages d'avant les catégories).
+  settings.category = settings.backend === 'free' ? 'free' : settings.backend === 'chatgpt' ? 'chatgpt' : 'claude';
+  if (settings.category === 'claude') settings.claudeMode = settings.backend;
+  if (settings.settingsPage === 'routines') settings.settingsPage = 'modes'; // la page « Routines » est devenue « Modes »
+}
+normalizeSettings();
+
+const saveSettings = () => store.set('settings', settings);
+
+// Message `init` du natif : lui seul connaît l'état réel du démarrage automatique et de l'économie de mémoire.
+function adoptNative(m) {
+  const before = { ...settings };
+  // Démarrage automatique : actif si la clé Windows/XDG existe (case de l'installateur) ou si le fichier de réglages
+  // le demande (la clé a pu disparaître pendant une mise à jour) ; sendConfig la réécrit alors.
+  settings.autostart = !!m.autostart || settings.autostart === true;
+  if (m.lowMemory !== undefined) settings.lowMemory = m.lowMemory; // Sous Linux, lowMemory ne vit que dans la page
+  synced = true;
+  if (before.autostart !== settings.autostart || before.lowMemory !== settings.lowMemory) saveSettings();
+  renderSettings();
+  sendConfig();
+  for (const k of ['autostart', 'lowMemory']) {
+    if (before[k] !== settings[k]) listeners.forEach((fn) => fn(k, eff(k)));
+  }
+}
 
 // Réglages imposés par le mode en cours (js/features/modes.js) : ils passent avant ceux de l'utilisateur
 // sans les modifier, donc arrêter le mode rend ses réglages tels quels. Lire `eff(clé)` là où un mode doit pouvoir agir.
@@ -66,7 +102,9 @@ function sendConfig() {
   send('config', [
     `mode=${settings.mode}`, `revealDelay=${settings.revealDelay}`, `hideDelay=${settings.hideDelay}`,
     `width=${settings.width}`, `panelH=${settings.panelH}`, `theme=${settings.theme}`,
-    `sound=${eff('sound') ? 1 : 0}`, `autostart=${settings.autostart ? 1 : 0}`,
+    `sound=${eff('sound') ? 1 : 0}`,
+    // Avant la réponse du natif, on ignore l'état de la copie locale (le natif garde le démarrage automatique tel quel).
+    ...(synced ? [`autostart=${settings.autostart ? 1 : 0}`] : []),
     `fullscreenReveal=${settings.fullscreenReveal ? 1 : 0}`, `voiceWake=${eff('voiceWake') ? 1 : 0}`, `voiceModel=${settings.voiceModel}`,
     // Le natif garde la page éveillée pendant une lecture : elle seule demande le mini-dock et la carte musique.
     `miniLyrics=${(settings.lyricsOpen && eff('miniLyrics')) || eff('musicReveal') ? 1 : 0}`,
@@ -100,7 +138,7 @@ function setSetting(key, value) {
   if (NUMERIC.has(key)) value = Number(value);
   if (settings[key] === value) return;
   settings[key] = value;
-  store.set('settings', settings);
+  saveSettings();
   applyAppearance();
   renderSettings();
   if (NATIVE_KEYS.has(key)) sendConfig();
@@ -209,4 +247,4 @@ function setupSettings() {
 const screenCapable = (backend = settings.backend) => settings.screenAccess
   && (backend === 'pro' || backend === 'api' || backend === 'chatgpt' || (backend === 'free' && settings.freeService !== 'groq'));
 
-export { settings, ACCENTS, eff, setOverrides, apiModel, setSetting, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange, screenCapable };
+export { settings, ACCENTS, eff, setOverrides, apiModel, setSetting, saveSettings, adoptNative, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange, screenCapable };
