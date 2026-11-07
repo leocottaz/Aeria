@@ -3,6 +3,7 @@
 import { $, store, toast } from '../core/util.js';
 import { bridge, send } from '../core/bridge.js';
 import { settings, setSetting } from '../core/settings.js';
+import { notify } from '../dock/mini.js';
 
 const RELEASES_API = 'https://api.github.com/repos/leocottaz/Aeria/releases';
 const RELEASES ='https://github.com/leocottaz/Aeria/releases';
@@ -75,7 +76,7 @@ async function check({ manual = false } = {}) {
       // Une seule notification par version, même si le panneau reste fermé.
       if (store.get('updateNotified', '') !== r.tag_name && r.tag_name !== settings.updateSkipped) {
         store.set('updateNotified', r.tag_name);
-        send('notify', 'Mise à jour disponible', `Aeria ${version} est prête (tu as la ${U.version}).`);
+        notify('Mise à jour disponible', `Aeria ${version} est prête (tu as la ${U.version}).`, { icon: 'sparkles', tab: 'settings' });
       }
     } else if (manual) {
       setStatus('Tu as la dernière version.');

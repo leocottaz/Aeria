@@ -6,6 +6,7 @@
 import { $, $$, uid, esc, icon, store, toast } from '../core/util.js';
 import { ask, send } from '../core/bridge.js';
 import { ACCENTS, setOverrides } from '../core/settings.js';
+import { notify } from '../dock/mini.js';
 
 const STEP_TYPES = { open: 'Ouvrir', volume: 'Volume', mute: 'Son', music: 'Musique', wait: 'Attendre', lock: 'Verrouiller' };
 const MUSIC = { play: 'Lecture', pause: 'Pause', next: 'Morceau suivant', previous: 'Morceau précédent' };
@@ -120,7 +121,7 @@ function onAppStart(app) {
   if (!m || m.id === active?.id) return;
   startMode(m);
   const name = m.name.trim() || 'Mode';
-  send('notify', `Mode « ${name} » démarré`, `${appFile(app)} s’est ouverte.`);
+  notify(`Mode « ${name} » démarré`, `${appFile(app)} s’est ouverte.`, { icon: 'sparkles', tab: 'settings' });
   toast(`Mode « ${name} » démarré (${appFile(app)})`);
 }
 

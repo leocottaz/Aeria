@@ -7,6 +7,7 @@
 #include "app/dock.h"
 #include "app/tray.h"
 #include "common/util.h"
+#include "features/appnotifs.h"
 #include "features/media.h"
 #include "features/pc.h"
 #include "features/reminders.h"
@@ -42,8 +43,13 @@ void PostToPage(std::string json) {
     if (g_window) PostMessageW(g_window, WM_APP_WEB, 0, (LPARAM) new std::string(std::move(json)));
 }
 
-void Deliver(LPARAM lp) {
+void PostToPageAwake(std::string json) {
+    if (g_window) PostMessageW(g_window, WM_APP_WEB, 1, (LPARAM) new std::string(std::move(json)));
+}
+
+void Deliver(WPARAM wake, LPARAM lp) {
     std::unique_ptr<std::string> json((std::string*)lp);
+    if (wake) webview::Wake(); // thread UI : WebView2 n'accepte pas Resume depuis un autre thread
     webview::PostJson(util::Widen(*json));
 }
 
@@ -79,8 +85,9 @@ void HandleMessage(const std::string& msg) {
     } else if (cmd == "revealmusic") { // ms \n largeur (DIP)
         auto f = util::Split(arg, '\n', 2);
         dock::RevealMusic(f.empty() ? 0 : std::atoi(f[0].c_str()), f.size() > 1 ? std::atoi(f[1].c_str()) : 0);
-    } else if (cmd == "mini") {
-        dock::SetMini(std::atoi(arg.c_str()));
+    } else if (cmd == "mini") { // largeur (DIP), 1 = notification (s'affiche même en plein écran), hauteur (DIP), séparés par « , »
+        auto f = util::Split(arg, ',', 3);
+        dock::SetMini(f.size() > 0 ? std::atoi(f[0].c_str()) : 0, f.size() > 1 && f[1] == "1", f.size() > 2 ? std::atoi(f[2].c_str()) : 0);
     } else if (cmd == "pill") { // largeur, hauteur (DIP), garder ouverte (0/1), séparés par « , »
         auto f = util::Split(arg, ',', 3);
         dock::SetPill(f.size() > 0 ? std::atoi(f[0].c_str()) : 0, f.size() > 1 ? std::atoi(f[1].c_str()) : 0, f.size() > 2 && f[2] == "1");
@@ -130,9 +137,10 @@ void HandleMessage(const std::string& msg) {
     } else if (cmd == "timer") { // fin du compte à rebours (ms epoch), 0 = aucun
         reminders::SetTimerEnd(std::atoll(arg.c_str()));
         reminders::Check();
-    } else if (cmd == "notify") {
-        auto f = util::Split(arg, '\n', 2);
-        if (f.size() == 2) tray::Notify(f[0], f[1], dock::Cfg().sound);
+    } else if (cmd == "appnotifs") { // 1 = afficher les notifications des autres applis, 0 = arrêter
+        appnotifs::SetEnabled(arg == "1");
+    } else if (cmd == "chime") { // son d'une notification affichée par la page
+        if (dock::Cfg().sound) tray::Chime();
 
     // --- actions sur le PC (Claude, routines)
     } else if (cmd == "search") { // id \n mots \n extension \n du \n au

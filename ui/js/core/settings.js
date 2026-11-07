@@ -21,6 +21,8 @@ const DEFAULTS = {
   screenAccess: true, // Claude (Pro et Clé API) peut regarder l'écran quand la demande l'exige
   musicSource: 'deezer', musicReveal: true, lyricsOpen: true, miniLyrics: true, musicTint: true,
   timerPill: false, // temps du minuteur dans le mini-dock
+  appNotifs: false, // notifications des autres applis dans la pastille du mini-dock (Windows : demande l'accès aux notifications)
+  appNotifsText: true, // avec leur contenu ; sinon seulement le nom de l'appli
   voiceWake: false, // dire « Aeria » ouvre le dock (micro écouté hors ligne par le natif)
   voiceModel: 'small', // modèle de reconnaissance à utiliser (base, small, medium) : aucun n'est téléchargé tant qu'on ne le demande pas
   model: 'auto', effort: 'low', customInstr: '', lastTab: 'claude', settingsPage: 'aeria',

@@ -93,6 +93,8 @@ gint64 g_holdUntil = 0;
 bool g_releaseHoldOnEnter = false;
 bool g_waitLeave = false;
 int g_miniW = 0;
+int g_miniH = kMiniH;      // hauteur voulue par la page (DIP) : plus haute pour une carte de notification
+bool g_miniNotice = false; // la pastille montre une notification (visible aussi devant une appli plein écran)
 int g_musicW = 380;
 bool g_listening = false; // la commande vocale écoute : la pilule reste là
 bool g_pillKeep = false;  // la page garde la pilule ouverte (la réponse s'y affiche)
@@ -213,7 +215,7 @@ Rect TargetRect(State s) {
         case State::Hidden: w = g_cfg.mode == 1 ? kTabW : kStripW; h = kInset; break;
         case State::Progress: w = kStripW; h = kInset + kStripH; break;
         case State::Peek: w = kTabW; h = kInset + kTabH; break;
-        case State::Mini: w = g_miniW; h = kInset + kMiniH; break;
+        case State::Mini: w = g_miniW; h = kInset + g_miniH; break;
         case State::Music: w = g_musicW; h = kInset + kMusicH; break;
         case State::Listen: w = g_pillW; h = kInset + g_pillH; break;
         case State::Bar: h = kInset + kBarH; break;
@@ -361,6 +363,7 @@ gboolean AnimStep(gpointer) {
 bool ForegroundIsFullscreen() { return false; } // à faire : _NET_ACTIVE_WINDOW + _NET_WM_STATE_FULLSCREEN
 
 State RestState() {
+    if (g_miniNotice && g_miniW > 0) return State::Mini; // une notification s'affiche même devant une appli plein écran
     if (ForegroundIsFullscreen()) return State::Hidden;
     if (g_miniW > 0) return State::Mini;
     return g_cfg.mode == 1 ? State::Peek : State::Hidden;
@@ -695,11 +698,16 @@ void SetPinned(bool pinned) {
 
 void HoldFor(int ms) { g_holdUntil = NowMs() + std::max(0, ms); }
 
-void SetMini(int widthDip) {
+void SetMini(int widthDip, bool notice, int heightDip) {
     int w = widthDip > 0 ? std::clamp(widthDip, 40, 640) : 0;
-    if (w == g_miniW) return;
+    int h = w > 0 && heightDip > 0 ? std::clamp(heightDip, kMiniH, 140) : kMiniH;
+    notice = notice && w > 0;
+    if (w == g_miniW && h == g_miniH && notice == g_miniNotice) return;
     bool resized = w && g_miniW;
     g_miniW = w;
+    g_miniH = h;
+    g_miniNotice = notice;
+    if (IsResting(g_state) && RestState() != g_state) { SetState(RestState()); return; }
     if (g_state == State::Mini && resized) AnimateTo(TargetRect(State::Mini), 320, false);
     else if (IsResting(g_state) && RestState() != g_state) SetState(RestState());
 }

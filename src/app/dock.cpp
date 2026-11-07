@@ -85,6 +85,8 @@ ULONGLONG g_holdUntil = 0;
 bool g_releaseHoldOnEnter = false; // une ouverture sans la souris tient jusqu'au premier survol
 bool g_waitLeave = false;          // après un repli manuel, pas de réapparition avant que la souris parte
 int g_miniW = 0;                   // largeur voulue par la page pour le mini-dock (DIP), 0 = rien à montrer
+int g_miniH = kMiniH;              // hauteur voulue par la page (DIP) : plus haute que kMiniH pour une carte de notification
+bool g_miniNotice = false;         // la pastille montre une notification : visible aussi devant une appli plein écran
 int g_musicW = 380;                // largeur de la carte musique (DIP), selon le titre
 bool g_listening = false; // la commande vocale écoute : la pilule reste là
 bool g_pillKeep = false;  // la page garde la pilule ouverte (la réponse s'y affiche)
@@ -131,7 +133,7 @@ RECT TargetRect(State s) {
         case State::Hidden: w = g_cfg.mode == 1 ? kTabW : kStripW; h = kInset; break;
         case State::Progress: w = kStripW; h = kInset + kStripH; break;
         case State::Peek: w = kTabW; h = kInset + kTabH; break;
-        case State::Mini: w = g_miniW; h = kInset + kMiniH; break;
+        case State::Mini: w = g_miniW; h = kInset + g_miniH; break;
         case State::Music: w = g_musicW; h = kInset + kMusicH; break;
         case State::Listen: w = g_pillW; h = kInset + g_pillH; break;
         case State::Bar: h = kInset + kBarH; break;
@@ -222,6 +224,7 @@ bool ForegroundIsFullscreen() {
 // État de repos (jamais devant une appli plein écran) : mini-dock si la page a quelque chose
 // à montrer (rappels qui ont sonné, paroles), sinon languette en mode 1, sinon masqué.
 State RestState() {
+    if (g_miniNotice && g_miniW > 0) return State::Mini; // une notification s'affiche même devant une appli plein écran
     if (ForegroundIsFullscreen()) return State::Hidden;
     if (g_miniW > 0) return State::Mini;
     return g_cfg.mode == 1 ? State::Peek : State::Hidden;
@@ -466,7 +469,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
     switch (msg) {
         case bridge::WM_APP_WEB:
-            bridge::Deliver(lp);
+            bridge::Deliver(wp, lp);
             return 0;
         case webview::WM_APP_WEBVIEW_RESTART:
             webview::Restart();
@@ -633,11 +636,16 @@ void SetPinned(bool pinned) {
 
 void HoldFor(int ms) { g_holdUntil = GetTickCount64() + std::max(0, ms); }
 
-void SetMini(int widthDip) {
+void SetMini(int widthDip, bool notice, int heightDip) {
     int w = widthDip > 0 ? std::clamp(widthDip, 40, 640) : 0; // 40 : la cloche seule
-    if (w == g_miniW) return;
+    int h = w > 0 && heightDip > 0 ? std::clamp(heightDip, kMiniH, 140) : kMiniH;
+    notice = notice && w > 0;
+    if (w == g_miniW && h == g_miniH && notice == g_miniNotice) return;
     bool resized = w && g_miniW;
     g_miniW = w;
+    g_miniH = h;
+    g_miniNotice = notice;
+    if (IsResting(g_state) && RestState() != g_state) { SetState(RestState()); return; } // plein écran : la notification passe devant, ou s'efface
     if (g_state == State::Mini && resized) AnimateTo(TargetRect(State::Mini), 320, false); // nouvelle ligne
     else if (IsResting(g_state) && RestState() != g_state) SetState(RestState());
 }

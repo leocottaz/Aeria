@@ -1,4 +1,5 @@
-// Icône de la zone de notification et notifications (bulles Windows, D-Bus sous Linux).
+// Icône de la zone de notification et son des notifications. Plus de bulle : les notifications
+// s'affichent dans la pastille du mini-dock (ui/js/dock/mini.js), l'appelant joue seulement le son.
 #pragma once
 
 #ifdef _WIN32
@@ -9,7 +10,7 @@
 
 namespace tray {
 
-void Notify(const std::string& title, const std::string& text, bool sound);
+void Chime(); // son d'une notification (le réglage « son » est vérifié par l'appelant)
 
 #ifdef _WIN32
 constexpr UINT WM_APP_TRAY = WM_APP + 2; // callback des clics sur l'icône

@@ -4,6 +4,7 @@ import { $, $$, uid, esc, clamp, icon, store, toast, animateOut } from '../core/
 import { send } from '../core/bridge.js';
 import { fmtWhen, fmtIn } from '../core/format.js';
 import { tick } from '../dock/dock.js';
+import { showMiniNotice } from '../dock/mini.js';
 
 let reminders = store.get('reminders', []);
 const REPEAT_NAMES = { none: '', daily: 'chaque jour', weekdays: 'jours ouvrés', weekly: 'chaque semaine' };
@@ -53,6 +54,7 @@ function fireReminder(id) {
   saveReminders();
   renderReminders();
   showAlert(r);
+  showMiniNotice(`Rappel · ${r.text}`, { icon: 'clock', tab: 'reminders' }); // le son est joué par le natif
 }
 
 // Alerte de la barre. Un rappel, ou une autre alerte (minuteur) qui apporte ses propres boutons :

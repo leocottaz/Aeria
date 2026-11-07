@@ -3,6 +3,7 @@
 #include "common/util.h"
 
 #include <shellapi.h>
+#include <mmsystem.h> // PlaySoundW (winmm)
 
 #include <algorithm>
 #include <cmath>
@@ -87,14 +88,9 @@ HICON Icon() {
     return g_icon;
 }
 
-void Notify(const std::string& title, const std::string& text, bool sound) {
-    auto nid = BaseData();
-    nid.uFlags = NIF_INFO;
-    nid.dwInfoFlags = NIIF_USER | NIIF_LARGE_ICON | (sound ? 0 : NIIF_NOSOUND);
-    nid.hBalloonIcon = g_icon;
-    wcsncpy_s(nid.szInfoTitle, util::Widen(title).c_str(), _TRUNCATE);
-    wcsncpy_s(nid.szInfo, util::Widen(text).c_str(), _TRUNCATE);
-    Shell_NotifyIconW(NIM_MODIFY, &nid);
+void Chime() {
+    // Le son de notification du thème Windows (celui que la bulle jouait).
+    PlaySoundW(L"Notification.Default", nullptr, SND_ALIAS | SND_ASYNC | SND_NODEFAULT);
 }
 
 } // namespace tray

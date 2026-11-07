@@ -8,7 +8,7 @@ import { S } from '../core/state.js';
 import { settings, onSettingChange } from '../core/settings.js';
 import { showAlert, dismissAlert } from './reminders.js';
 import { tick } from '../dock/dock.js';
-import { setMiniTimer } from '../dock/mini.js';
+import { setMiniTimer, showMiniNotice } from '../dock/mini.js';
 
 const PRESETS = [1, 3, 5, 10, 15, 25, 30, 45, 60]; // minutes
 const MAX = 24 * 3600e3;
@@ -125,6 +125,7 @@ function finishTimer() {
     id: 'timer', text: `Minuteur terminé · ${fmtDuration(T.duration)}`,
     snoozeLabel: '+1 min', doneLabel: 'OK', onSnooze: addMinute, onDone: stopRinging,
   });
+  showMiniNotice(`Minuteur terminé · ${fmtDuration(T.duration)}`, { icon: 'timer', tab: 'timer' }); // son : natif
 }
 
 function stopRinging() {

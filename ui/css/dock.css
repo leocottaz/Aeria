@@ -166,6 +166,12 @@ body:not(.preview) .ambient {
   box-shadow: 0 0 12px -2px var(--m-tint);
 }
 .pill-art img { width: 100%; height: 100%; object-fit: cover; }
+/* Notification : une icône à la place de la pochette (le texte prend celui des paroles, avec la même animation). */
+.pill-ic { display: none; }
+.has-notice .pill-art { display: grid; place-items: center; }
+.has-notice .pill-art img { display: none; }
+.has-notice .pill-ic { display: grid; place-items: center; color: #fff; }
+.pill-ic .ic { width: 15px; height: 15px; }
 .pill-line { position: relative; flex: 1; min-width: 0; height: 100%; font: 650 13.5px/1.25 var(--font-d); letter-spacing: -.1px; text-align: center; }
 .pill-line span {
   position: absolute;
@@ -184,6 +190,39 @@ body:not(.preview) .ambient {
 .pill-line span.out { animation: lyric-out .35s var(--smooth) both; }
 @keyframes lyric-in { from { opacity: 0; transform: translateY(12px) scale(.97); } }
 @keyframes lyric-out { to { opacity: 0; transform: translateY(-12px) scale(.97); } }
+
+/* Carte de notification d'une autre appli (mini.js) : la pastille devient plus haute (--mini-h posé par la page,
+   envoyé au natif) ; logo à gauche, titre puis texte (2 lignes au plus) à droite. Seule animation : l'apparition. */
+.pill-card { display: none; }
+.pill.has-card { justify-content: flex-start; gap: 12px; padding: 0 18px 0 14px; }
+.pill.has-card > :not(.pill-card) { display: none; }
+.has-card .pill-card { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; text-align: left; animation: lyric-in .45s var(--smooth) both; }
+.pc-icon {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff;
+  font: 700 16px/1 var(--font-d);
+}
+.pc-icon.has-img { background: color-mix(in srgb, var(--fg) 10%, transparent); }
+.pc-icon img { width: 100%; height: 100%; object-fit: contain; }
+.pc-icon b { font-weight: inherit; }
+.pc-text { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 2px; }
+.pc-text b { overflow: hidden; font: 650 13.5px/17px var(--font-d); letter-spacing: -.1px; text-overflow: ellipsis; white-space: nowrap; }
+.pc-text small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--fg2);
+  font: 500 12.5px/16px var(--font);
+}
+.pc-text small:empty { display: none; }
 
 /* ---------------------------------------------------------------- pilule « Aeria » */
 /* S'ouvre quand « Aeria » a été entendu (état natif « listen », src/features/voice.cpp) : « Je t'écoute… », ce

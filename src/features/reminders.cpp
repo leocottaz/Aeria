@@ -54,19 +54,17 @@ void Check() {
     for (auto& r : g_list) {
         if (r.fired || r.due > now) continue;
         r.fired = true;
-        tray::Notify("Rappel", r.text, dock::Cfg().sound);
-        // Devant une appli plein écran, le dock ne descend pas : la page peut être en veille.
-        // On la réveille pour qu'elle compte le rappel et demande la cloche du mini-dock.
+        if (dock::Cfg().sound) tray::Chime();
+        // Plus de bulle ni de barre qui descend : la page affiche le rappel dans la pastille du mini-dock
+        // (même devant une appli plein écran). Elle peut être en veille : on la réveille.
         WakePage();
         bridge::PostToPage("{\"t\":\"fire\",\"id\":" + util::Json(r.id) + "}");
-        dock::RevealBriefly(9000);
     }
     if (g_timerEnd && g_timerEnd <= now) {
         g_timerEnd = 0;
-        tray::Notify("Minuteur", "Temps écoulé", dock::Cfg().sound);
+        if (dock::Cfg().sound) tray::Chime();
         WakePage();
         bridge::PostToPage("{\"t\":\"timerdone\"}");
-        dock::RevealBriefly(9000);
     }
 }
 

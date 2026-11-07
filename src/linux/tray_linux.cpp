@@ -2,7 +2,7 @@
 //  - Icône : StatusNotifierItem (D-Bus, org.kde.StatusNotifierItem), sans libappindicator. KDE,
 //    XFCE, Cinnamon, etc. l'affichent ; GNOME demande l'extension « AppIndicator ».
 //    Clic gauche : ouvre le panneau. Clic droit : le menu est dessiné par nous (méthode ContextMenu).
-//  - Notifications : service org.freedesktop.Notifications (pas de libnotify).
+//  - Notifications : affichées dans le dock (mini-dock) ; ici seulement leur son.
 #include "app/tray.h"
 
 #include "app/dock.h"
@@ -205,18 +205,10 @@ void Init() {
                                    nullptr, nullptr);
 }
 
-void Notify(const std::string& title, const std::string& text, bool sound) {
-    GDBusConnection* bus = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr);
-    if (!bus) return;
-    GVariantBuilder hints;
-    g_variant_builder_init(&hints, G_VARIANT_TYPE("a{sv}"));
-    if (sound) g_variant_builder_add(&hints, "{sv}", "sound-name", g_variant_new_string("message-new-instant"));
-    GVariant* params = g_variant_new("(susssasa{sv}i)", "Aeria", (guint32)0, "", title.c_str(), text.c_str(), nullptr,
-                                     &hints, (gint32)-1);
-    g_dbus_connection_call(bus, "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
-                           "org.freedesktop.Notifications", "Notify", params, nullptr, G_DBUS_CALL_FLAGS_NONE, 2000, nullptr,
-                           nullptr, nullptr);
-    g_object_unref(bus);
+void Chime() {
+    // Son du thème (canberra), sinon paplay ; sans aucun des deux : silence.
+    if (!g_spawn_command_line_async("canberra-gtk-play -i message-new-instant", nullptr))
+        g_spawn_command_line_async("paplay /usr/share/sounds/freedesktop/stereo/message-new-instant.oga", nullptr);
 }
 
 } // namespace tray

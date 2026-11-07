@@ -57,7 +57,10 @@ void SetPinned(bool pinned); // garder affiché
 void HoldFor(int ms);        // empêche le repli automatique pendant ms
 void RevealBriefly(int ms);  // fait descendre la barre (rappel qui sonne, minuteur…)
 void RevealMusic(int ms, int widthDip); // nouveau morceau : seulement la carte musique (largeur selon le titre)
-void SetMini(int widthDip);  // largeur du mini-dock (rappels, paroles) voulue par la page, 0 = aucun
+// Largeur du mini-dock (rappels, paroles, notification) voulue par la page, 0 = aucun.
+// notice : la pastille montre une notification, elle s'affiche aussi devant une appli plein écran.
+// heightDip : hauteur voulue (carte de notification), 0 = la hauteur normale (40).
+void SetMini(int widthDip, bool notice = false, int heightDip = 0);
 void SetPill(int widthDip, int heightDip, bool keep); // pilule de la commande vocale : taille voulue par la page, 0 = fermée
 
 } // namespace dock

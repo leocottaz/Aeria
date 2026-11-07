@@ -16,6 +16,7 @@ import { renderChat, focusComposer, setupChat } from './chat/chat.js';
 import { onMedia, setupMusic, connectMusic, previewLyrics, fetchLyrics, guessTrack } from './features/music.js';
 import { setupUpdater, onUpdateInit, onUpdateMessage, showChangelog } from './features/updater.js';
 import { onVoice, setupVoice, syncVoice } from './features/voice.js';
+import { onAppNotif, onAppNotifsStatus, setupAppNotifs, syncAppNotifs } from './features/appnotifs.js';
 
 function onNative(m) {
   switch (m.t) {
@@ -64,6 +65,8 @@ function onNative(m) {
     case 'media': onMedia(m); break;
     case 'update': onUpdateMessage(m); break;
     case 'voice': onVoice(m); break;
+    case 'appnotif': onAppNotif(m); break; // notification d'une autre appli (Windows)
+    case 'appnotifs': onAppNotifsStatus(m); break; // l'écoute est active, refusée ou impossible
     case 'reply': onReply(m); break;
     case 'hotkey': switchTab('claude'); focusComposer(); break;
     case 'show': switchTab(m.tab); if (m.tab === 'claude') focusComposer(); break;
@@ -88,6 +91,7 @@ function init() {
   setupGlobal();
   setupUpdater();
   setupVoice();
+  setupAppNotifs();
   renderSettings();
   renderKey();
   renderCc();
@@ -110,6 +114,7 @@ function init() {
     send('ready');
     sendConfig();
     syncVoice();
+    syncAppNotifs();
     // Le natif recrée la vue avec les nouvelles options : on laisse l'interrupteur finir.
     onSettingChange((key, value) => {
       if (key === 'voiceWake' || key === 'voiceModel') setTimeout(syncVoice, 50); // le natif a reçu la config : il annonce son état

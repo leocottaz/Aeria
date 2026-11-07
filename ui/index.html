@@ -23,12 +23,17 @@
   <div class="peek" aria-hidden="true"><span></span></div>
   <div class="strip" aria-hidden="true"><span id="stripFill"></span></div>
 
-  <!-- Mini-dock (dock rangé) : rappels qui ont sonné, minuteur et/ou ligne de paroles en cours (js/dock/mini.js) -->
+  <!-- Mini-dock (dock rangé) : rappels qui ont sonné, minuteur et/ou ligne de texte : notification ou paroles en cours (js/dock/mini.js) -->
   <button type="button" class="pill" id="pill">
     <span class="pill-alert"><i data-icon="bell"></i><b id="pillCount">0</b></span>
     <span class="pill-timer" id="pillTimer"><i data-icon="timer"></i><b id="pillTime"></b></span>
-    <span class="pill-art"><img id="pillArt" alt="" hidden></span>
+    <span class="pill-art"><img id="pillArt" alt="" hidden><span class="pill-ic" id="pillIc"></span></span>
     <span class="pill-line" id="pillLine"></span>
+    <!-- Carte de notification d'une autre appli : logo, titre, texte dessous (js/features/appnotifs.js) -->
+    <span class="pill-card" id="pillCard">
+      <span class="pc-icon" id="pcIcon"><img id="pcImg" alt="" hidden><b id="pcInitial"></b></span>
+      <span class="pc-text"><b id="pcTitle"></b><small id="pcBody"></small></span>
+    </span>
   </button>
 
   <!-- Pilule « Aeria » (état « listen ») : « Aeria » a été entendu. Elle montre ce qu'on dit en direct, puis la
@@ -525,6 +530,9 @@
             <div class="card glass">
               <h3>Général</h3>
               <label class="toggle-row">Son des notifications<span class="toggle"><input type="checkbox" data-setting="sound"><span></span></span></label>
+              <label class="toggle-row"><span>Notifications des autres applis <span class="hint">Discord, mails… s’affichent dans la pastille du dock rangé (Windows : demande l’accès aux notifications)</span></span><span class="toggle"><input type="checkbox" data-setting="appNotifs"><span></span></span></label>
+              <label class="toggle-row"><span>Afficher leur contenu <span class="hint">désactivé : seulement le nom de l’appli, utile pour partager l’écran</span></span><span class="toggle"><input type="checkbox" data-setting="appNotifsText"><span></span></span></label>
+              <span class="hint" id="appNotifsStatus"></span>
               <label class="toggle-row">Lancer au démarrage de l'ordinateur<span class="toggle"><input type="checkbox" data-setting="autostart"><span></span></span></label>
               <label class="toggle-row"><span>Économie de mémoire <span class="hint">~200 Mo de moins, animations moins fluides</span></span><span class="toggle"><input type="checkbox" data-setting="lowMemory"><span></span></span></label>
               <div class="toggle-row">Quitter Aeria<button type="button" class="ghost danger" id="quitBtn"><i data-icon="power"></i>Quitter</button></div>

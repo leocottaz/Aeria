@@ -43,6 +43,7 @@ add_executable(Aeria WIN32
         # features/ : fonctionnalités qui ont besoin du natif
         src/features/reminders.cpp      # échéances des rappels et du minuteur
         src/features/media.cpp          # lecteur : musique en cours via Windows
+        src/features/appnotifs.cpp      # notifications des autres applis (UserNotificationListener)
         src/features/pc.cpp             # recherche de fichiers, routines, volume
         src/features/screen.cpp         # capture d'écran (sans le dock) pour l'assistante
         src/features/updater.cpp        # mise à jour : télécharge, vérifie et lance Setup.exe

@@ -19,6 +19,7 @@ add_executable(Aeria
         src/linux/autostart_linux.cpp       # ~/.config/autostart
         src/linux/tray_linux.cpp            # notifications D-Bus
         src/linux/media_linux.cpp           # lecteur : MPRIS2
+        src/linux/appnotifs_linux.cpp       # notifications des autres applis : pas encore prises en charge
         src/linux/pc_linux.cpp              # fichiers, routines, volume
         src/linux/screen_linux.cpp          # capture d'écran (X11) pour l'assistante
         src/features/reminders.cpp          # échéances des rappels et du minuteur (partagé avec Windows)

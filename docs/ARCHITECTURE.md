@@ -48,7 +48,7 @@ Chaque module expose une petite interface dans son `.h` (un `namespace` : `dock:
 | --- | --- |
 | `main.cpp` | Instance unique, initialisation, boucle de messages. |
 | `app/dock.*` | Fenêtre acrylique, états (`hidden`, `progress`, `peek`, `mini`, `music`, `listen`, `bar`, `panel`), animations, détection de la souris, écran courant (rangé, le dock suit l'écran de la souris), repli auto, raccourci Ctrl+Alt+Espace, menu de l'icône, application des réglages. |
-| `app/tray.*` | Icône de notification (générée à l'exécution) et bulles Windows. |
+| `app/tray.*` | Icône de notification (générée à l'exécution) et son des notifications (`Chime`) : plus de bulle, les notifications s'affichent dans la pastille du mini-dock. |
 | `app/drop_edge.*` | Windows : bande de 2 px au bord haut de l'écran (largeur du dock, `WS_EX_LAYERED` alpha 1, enregistrée comme `IDropTarget`). Quand des **fichiers** (`CF_HDROP` ou fichiers virtuels de navigateur) glissés entrent dedans, elle poste `WM_APP_DRAG` : `dock::OpenForDrag` ouvre le panneau sur le chat, **sans prendre le focus** (le glisser continue dans l'appli d'origine) ; le dépôt se fait ensuite sur la page. Elle ne rend rien (`DROPEFFECT_NONE`) et laisse passer les clics (`WS_EX_TRANSPARENT`), sauf bouton enfoncé (`Poll` la rend alors « solide » : un glisser est un bouton enfoncé). Linux : les bandes de `RebuildEdges` (XWayland seulement) acceptent `text/uri-list` et appellent `OpenForDrag`. |
 | `app/autostart.*` | Clé `Run` pour le lancement au démarrage. |
 | `web/webview_host.*` | Création de WebView2 (`--in-process-gpu` si l'économie de mémoire est activée, réglage dans `HKCU\Software\Aeria\LowMemory`), fond transparent, liens externes ouverts dans le navigateur, réception des messages, veille quand le dock est caché (`SetVisible(false)` : cible mémoire basse + `TrySuspend`), recréation si le processus meurt. |
@@ -61,6 +61,7 @@ Chaque module expose une petite interface dans son `.h` (un `namespace` : `dock:
 | `features/pc.*` | Actions sur le PC : recherche de fichiers (index Windows Search via OLE DB, dossier de l'utilisateur hors AppData, mots nettoyés), ouverture d'un résultat (seulement un chemin déjà renvoyé ; exécutables et scripts → dossier sélectionné), routines (thread : ouvrir, volume Core Audio, musique, attendre), fenêtre « Ouvrir ». |
 | `features/screen.*` | Capture d'écran sur demande de la page (commande `screenshot`, jamais en continu). Windows : `StretchBlt` de l'écran du dock réduit à 1568 px, JPEG par GDI+, dans un thread ; le dock reste visible mais est **absent de l'image** (`SetWindowDisplayAffinity(WDA_EXCLUDEFROMCAPTURE)` le temps de la capture). Linux (`screen_linux.cpp`) : racine X11, dock rendu transparent 150 ms ; **refusé sous Wayland** (image noire). Avec `file`, écrit aussi le JPEG dans `claude-chat/screens/` (une seule capture gardée) pour que Claude Code le lise avec `Read`. |
 | `features/updater.*` | Mise à jour (voir [Mises à jour](#mises-à-jour)) : `updater_common.cpp` (version compilée, validation du tag, lecture de `SHA256SUMS`), `updater.cpp` (Windows : téléchargement WinHTTP, SHA-256 CNG, lancement de `Setup.exe`). |
+| `features/appnotifs.*` | Notifications des autres applis (Windows) : `UserNotificationListener`, relevé toutes les 1,5 s dans un thread (l'évènement `NotificationChanged` est réservé aux applis empaquetées), vtable du listener déclarée à la main (namespace nommé), le reste vient des en-têtes MinGW. Les notifications déjà présentes au démarrage de l'écoute sont ignorées. `linux/appnotifs_linux.cpp` : bouchon (`unsupported`). |
 | `features/voice.*` | Commande vocale « Aeria » (voir [Voix](#voix)) : `voice.cpp` (partagé : découpage du micro en phrases, whisper.cpp, détection du mot), `voice_win.cpp` (micro waveIn, téléchargement du modèle WinHTTP + SHA-256 CNG), `linux/voice_linux.cpp` (micro `parec`/`arecord`, libcurl). |
 | `common/util.h` · `util.cpp` · `util_common.cpp` | JSON, découpage, base64 (`util_common.cpp`, commun) ; UTF-8/UTF-16 et dossiers Windows (`util.cpp`). |
 
@@ -80,7 +81,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `js/core/settings.js` | Réglages persistés, apparence, envoi au natif. `onSettingChange(fn)` pour réagir sans dépendance circulaire. |
 | `js/core/format.js`, `js/core/util.js` | Dates, icônes, stockage (`store`, clés préfixées `aeria.`), toast… |
 | `js/dock/dock.js` | États visuels, onglets (`NAV_TABS` = boutons de la barre ; Claude n'en a pas : orbe, champ « Demander », Ctrl+Alt+Espace), horloge, barre, raccourcis clavier. |
-| `js/dock/mini.js` | Mini-dock (dock rangé) : cloche + nombre de rappels sonnés (`setMiniAlerts`, appelé par `tick`), temps du minuteur (`setMiniTimer`), ligne de paroles (`setMiniLyric`) ; calcule la largeur et l'envoie au natif (`mini`). |
+| `js/dock/mini.js` | Mini-dock (dock rangé) : cloche + nombre de rappels sonnés (`setMiniAlerts`, appelé par `tick`), temps du minuteur (`setMiniTimer`), ligne de paroles (`setMiniLyric`), notifications (`showMiniNotice`, `notify` : texte à la place des paroles pendant 5 à 10 s, décompté pastille visible) ; calcule la largeur et l'envoie au natif (`mini`). |
 | `js/features/reminders.js` | Rappels : saisie en français, liste, alertes. |
 | `js/features/notes.js` | Notes : cartes en grille ; un clic ouvre la note en plein panneau (`#noteEditor` : titre, mise en forme, thème de fond). Contenu en HTML limité (`sanitize`), `{ id, title, html, theme, updated }`. |
 | `js/features/todo.js` | To-do : tâches à cocher, étoile (en tête de liste), modification par double-clic, section « Faites ». |
@@ -89,6 +90,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `js/features/files.js` | Recherche de fichiers pour Claude : résultats rangés par recherche (cartes cliquables), ouverture par numéro dans la dernière recherche, contexte du mode Pro. |
 | `js/features/screen.js` | Outil `screenshot` : `takeScreenshot` (commande `screenshot`), miniatures gardées en mémoire pour la carte du chat (`shotFor`), jamais enregistrées. Réglage `screenAccess` ; `screenCapable` (settings.js) dit si le mode de connexion lit les images (Pro, Clé API, Gemini, OpenAI ; pas Groq). Mode Clé API / Gratuit : résultat d'outil avec image (Gratuit : image dans un message utilisateur qui suit) ; mode Pro : ligne `[[ecran|raison]]` → capture dans `screens/` → second tour automatique où Claude lit le fichier avec `Read`. |
 | `js/features/updater.js` | Mises à jour : interroge l'API GitHub (`releases/latest`) au démarrage puis toutes les 6 h, compare les versions, affiche la bannière (`#updateBanner`, visible panneau ouvert) et la carte des Réglages → Système ; envoie `update` au natif au clic. |
+| `js/features/appnotifs.js` | Notifications des autres applis : réglages (Système › Général : `appNotifs`, `appNotifsText`), message `appnotif` → pastille du mini-dock (`showMiniNotice`) ou toast si le dock est ouvert, statut `appnotifs`. |
 | `js/features/voice.js` | Voix : page « Voix » des Réglages (état, téléchargement du modèle), champ « Demander » éclairé pendant l'écoute, envoie à Aeria la phrase reçue (`heard`). |
 | `js/features/modes.js` | Modes : données (`aeria.modes`, anciennes routines reprises), éditeur des Réglages, démarrage (étapes de démarrage envoyées au natif par `routine`), déclencheur « ouverture d'une appli » (`apps` du mode, `syncWatch` → `watch`, `onAppStart` ← `appstart`), mode en cours (`aeria.activeMode`) avec sa pilule dans la barre, comportements `BEHAVIORS` (réglages imposés via `setOverrides`/`eff` de `settings.js`), recherche par nom pour Claude. |
 | `js/chat/connection.js` | Section « Connexion » des Réglages : statut de Claude Code, clé API, clés gratuites. |
@@ -116,12 +118,12 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `reveal` | ms | Fait descendre la barre pendant ms (sauf devant une appli plein écran). |
 | `revealmusic` | ms, largeur (DIP) | Nouveau morceau : fait descendre seulement la carte musique (état `music`, 280 à 380 × 76 selon le titre) pendant ms. |
 | `pill` | `largeur,hauteur,garder` (DIP, 0/1) | Pilule « Aeria » (état `listen`) : taille voulue par la page (`js/features/pill.js`, mesurée sur son contenu) ; `garder=1` la laisse ouverte même quand la voix a fini d'écouter (la réponse s'y affiche) ; hauteur `0` = la page la referme. Bornée à 520 × 300. |
-| `mini` | largeur (DIP) | Mini-dock (rappels sonnés, minuteur, paroles) : quand le dock est rangé, la fenêtre devient une pastille de cette largeur. `0` = rien à montrer. |
+| `mini` | largeur (DIP), `1` si la pastille montre une notification, hauteur (DIP, carte de notification), séparés par une virgule : `328,1,59` | Mini-dock (rappels sonnés, minuteur, paroles, notification) : quand le dock est rangé, la fenêtre devient une pastille de cette largeur. `0` = rien à montrer. Avec `,1` elle s'affiche aussi devant une appli plein écran. |
 | `media` | `toggle`, `next`, `prev`, `seek\n<ms>`, `sources\n<deezer\|all>`, `refresh` | Pilote le lecteur / choisit la source / redemande l'état complet. |
 | `lowmem` | `0`/`1` | Économie de mémoire (`--in-process-gpu`) ; si elle change, la vue est recréée. |
 | `reminders` | lignes `id\tdueMs\ttexte` | Rappels à venir. |
 | `timer` | `finMs` (0 = aucun) | Fin du compte à rebours du minuteur. |
-| `notify` | titre, texte | Notification Windows. |
+| `chime` | — | Joue le son d'une notification (si le réglage « son » est actif). Le texte, lui, est affiché par la page. |
 | `key` / `delkey` | clé / — | Enregistre / supprime la clé API. |
 | `http` | id, méthode, chemin, betas, corps | Requête vers l'API (mode Clé API). |
 | `fhttp` | id, service (`gemini`/`groq`), méthode, chemin, corps | Requête vers le modèle gratuit (mêmes réponses `chunk` / `done` / `error`). |
@@ -135,6 +137,7 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `search` | id, mots, extension, du, au | Recherche de fichiers → `reply` avec `results` (`path`, `name`, `modified`, `size`). |
 | `openfound` | chemin | Ouvre un fichier déjà renvoyé par `search` (sinon rien). |
 | `routine` | lignes `type\tvaleur` (`open`, `volume`, `mute`, `music`, `wait`, `lock`) | Exécute les étapes de démarrage d'un mode dans un thread natif (le mode « en cours » et ses comportements restent côté page). |
+| `appnotifs` | `1` ou `0` | Démarre ou arrête l'écoute des notifications des autres applis (réglage `appNotifs`, désactivé par défaut). Renvoie `appnotifs` (statut), puis `appnotif` à chaque nouvelle notification. |
 | `watch` | noms d'exécutable, un par ligne (jamais un chemin ; vide = rien) | Applis qui déclenchent un mode : `pc::WatchApps`, relevé des processus chaque seconde par `pc::CheckApps` (même minuterie que les rappels, thread de l'interface). Seule une ouverture **après** la commande déclenche ; ce qui tourne déjà est ignoré. Renvoie `appstart`. |
 | `volume` | 0 à 100 | Volume de la sortie audio par défaut. |
 | `pickfile` | id | Fenêtre « Ouvrir » → `reply` avec `path` (vide si annulé). |
@@ -159,6 +162,8 @@ Modules ES (`<script type="module" src="js/main.js">`), sans dépendance externe
 | `timerdone` | — | Le compte à rebours du minuteur est fini. |
 | `appstart` | `app` (nom de l'exécutable, minuscules) | Une appli surveillée (commande `watch`) vient de s'ouvrir : la page démarre le mode qui l'attend (`onAppStart`, `modes.js`). Windows : la page est d'abord sortie de veille. |
 | `media` | `active`, `app`, `title`, `artist`, `album`, `status`, `pos`, `dur`, `at`, `canNext`, `canPrev`, `canSeek`, (`art` : data URL, seulement au changement de morceau) | Musique suivie. `pos` est la position (ms) à l'instant `at` (ms epoch). |
+| `appnotifs` | `status` (`allowed`, `denied`, `unsupported`, `error`) | Résultat du démarrage de l'écoute des notifications des autres applis. Sur tout sauf `allowed`, la page désactive le réglage. |
+| `appnotif` | `app`, `title`, `text`, `icon` (data URL PNG du logo, vide si introuvable) | Une notification d'une autre appli vient d'arriver : la page l'affiche en carte (logo, titre, texte dessous) (la page est d'abord sortie de veille : `PostToPageAwake`). |
 | `hotkey`, `show` | (`tab`) | Ouverture par raccourci ou menu de l'icône. |
 | `reply` | `id`, `ok`, (`error`, `results`, `path`) | Réponse à une commande `ask()` (`search`, `pickfile`). |
 | `wheel` | `x`, `y`, `dy` | Linux : molette, en crans, à la position (`x`, `y`) de la page. |
