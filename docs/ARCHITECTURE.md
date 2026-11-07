@@ -140,6 +140,7 @@ Modules ES (`<script type="module" src="js/boot.js">`, qui charge d'abord les do
 | `search` | id, mots, extension, du, au | Recherche de fichiers → `reply` avec `results` (`path`, `name`, `modified`, `size`). |
 | `openfound` | chemin | Ouvre un fichier déjà renvoyé par `search` (sinon rien). |
 | `routine` | lignes `type\tvaleur` (`open`, `volume`, `mute`, `music`, `wait`, `lock`) | Exécute les étapes de démarrage d'un mode dans un thread natif (le mode « en cours » et ses comportements restent côté page). |
+| `openapp` | identifiant d'appli (AUMID) | Clic sur la carte d'une notification d'appli : ouvre ou ramène l'appli (`shell:AppsFolder\<AUMID>`). Refusé si cet identifiant n'a jamais été vu dans une notification. L'action exacte de la notification (conversation, lien) n'est pas lisible par l'API. |
 | `appnotifs` | `1` ou `0` | Démarre ou arrête l'écoute des notifications des autres applis (réglage `appNotifs`, désactivé par défaut). Renvoie `appnotifs` (statut), puis `appnotif` à chaque nouvelle notification. |
 | `watch` | noms d'exécutable, un par ligne (jamais un chemin ; vide = rien) | Applis qui déclenchent un mode : `pc::WatchApps`, relevé des processus chaque seconde par `pc::CheckApps` (même minuterie que les rappels, thread de l'interface). Seule une ouverture **après** la commande déclenche ; ce qui tourne déjà est ignoré. Renvoie `appstart`. |
 | `volume` | 0 à 100 | Volume de la sortie audio par défaut. |
@@ -166,7 +167,7 @@ Modules ES (`<script type="module" src="js/boot.js">`, qui charge d'abord les do
 | `appstart` | `app` (nom de l'exécutable, minuscules) | Une appli surveillée (commande `watch`) vient de s'ouvrir : la page démarre le mode qui l'attend (`onAppStart`, `modes.js`). Windows : la page est d'abord sortie de veille. |
 | `media` | `active`, `app`, `title`, `artist`, `album`, `status`, `pos`, `dur`, `at`, `canNext`, `canPrev`, `canSeek`, (`art` : data URL, seulement au changement de morceau) | Musique suivie. `pos` est la position (ms) à l'instant `at` (ms epoch). |
 | `appnotifs` | `status` (`allowed`, `denied`, `unsupported`, `error`) | Résultat du démarrage de l'écoute des notifications des autres applis. Sur tout sauf `allowed`, la page désactive le réglage. |
-| `appnotif` | `app`, `title`, `text`, `icon` (data URL PNG du logo, vide si introuvable) | Une notification d'une autre appli vient d'arriver : la page l'affiche en carte (logo, titre, texte dessous) (la page est d'abord sortie de veille : `PostToPageAwake`). |
+| `appnotif` | `app`, `title`, `text`, `icon` (data URL PNG du logo, vide si introuvable), `aumid` | Une notification d'une autre appli vient d'arriver : la page l'affiche en carte (logo, titre, texte dessous) (la page est d'abord sortie de veille : `PostToPageAwake`). |
 | `hotkey`, `show` | (`tab`) | Ouverture par raccourci ou menu de l'icône. |
 | `reply` | `id`, `ok`, (`error`, `results`, `path`) | Réponse à une commande `ask()` (`search`, `pickfile`). |
 | `wheel` | `x`, `y`, `dy` | Linux : molette, en crans, à la position (`x`, `y`) de la page. |

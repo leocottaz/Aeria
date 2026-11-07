@@ -118,6 +118,7 @@ body:not(.preview) .ambient {
   visibility: hidden;
   pointer-events: none;
   translate: -50% 0;
+  z-index: 30; /* au-dessus de la barre (invisible mais posée au même endroit) : sans ça, un clic sur la pastille ne l'atteint pas */
   transition: opacity .3s var(--smooth), width .10s var(--smooth), visibility 0s .3s;
 }
 .st-mini .pill { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }

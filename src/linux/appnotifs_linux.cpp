@@ -10,4 +10,6 @@ void SetEnabled(bool on) {
     if (on) bridge::PostToPage("{\"t\":\"appnotifs\",\"status\":\"unsupported\"}");
 }
 
+void OpenApp(const std::string&) {}
+
 } // namespace appnotifs

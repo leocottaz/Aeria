@@ -33,8 +33,8 @@ function onAppNotif(m) {
   const app = (m.app || '').trim() || 'Application';
   // Contenu masqué : seulement le nom de l'appli.
   const card = settings.appNotifsText
-    ? { app, title: m.title || '', text: m.text || '', icon: m.icon || '' }
-    : { app, title: app, text: 'Nouvelle notification', icon: m.icon || '' };
+    ? { app, title: m.title || '', text: m.text || '', icon: m.icon || '', aumid: m.aumid || '' }
+    : { app, title: app, text: 'Nouvelle notification', icon: m.icon || '', aumid: m.aumid || '' };
   const line = [card.title, card.text].filter(Boolean).join(' — ');
   if (!line) return;
   if (S.st === 'bar' || S.st === 'panel') toast(`${app} · ${line}`); // dock ouvert : pas de pastille

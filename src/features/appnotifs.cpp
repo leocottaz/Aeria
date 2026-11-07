@@ -8,6 +8,7 @@
 #include <roapi.h>
 #include <winstring.h>
 #include <shcore.h>
+#include <shellapi.h>
 #include <shobjidl.h>
 #include <objidl.h>
 #include <gdiplus.h>
@@ -18,6 +19,7 @@
 #include <algorithm>
 #include <atomic>
 #include <map>
+#include <mutex>
 #include <set>
 #include <string>
 #include <thread>
@@ -246,10 +248,18 @@ std::string ShellIconDataUrl(const std::wstring& aumid) {
 }
 
 // Nom et logo de l'appli qui a posté la notification. Le logo est gardé par nom d'appli (icons) : on ne le relit pas.
-std::string AppDetails(UN::IUserNotification* un, std::map<std::string, std::string>& icons, std::string* icon) {
+std::string AppDetails(UN::IUserNotification* un, std::map<std::string, std::string>& icons, std::string* icon,
+                       std::wstring* aumid) {
     Ptr<IAppInfo> info;
     std::string name;
     if (SUCCEEDED(un->get_AppInfo(info.put())) && info) {
+        HSTRING id = nullptr;
+        if (SUCCEEDED(info->get_AppUserModelId(&id)) && id) {
+            UINT32 len = 0;
+            const wchar_t* raw = WindowsGetStringRawBuffer(id, &len);
+            aumid->assign(raw, len);
+            WindowsDeleteString(id);
+        }
         Ptr<IAppDisplayInfo> display;
         HSTRING h = nullptr;
         if (SUCCEEDED(info->get_DisplayInfo(display.put())) && display) {
@@ -257,16 +267,7 @@ std::string AppDetails(UN::IUserNotification* un, std::map<std::string, std::str
             auto cached = icons.find(name);
             if (cached == icons.end()) {
                 std::string logo = LogoDataUrl(display.p);
-                if (logo.empty()) {
-                    HSTRING id = nullptr;
-                    if (SUCCEEDED(info->get_AppUserModelId(&id)) && id) {
-                        UINT32 len = 0;
-                        const wchar_t* raw = WindowsGetStringRawBuffer(id, &len);
-                        std::wstring aumid(raw, len);
-                        WindowsDeleteString(id);
-                        logo = ShellIconDataUrl(aumid);
-                    }
-                }
+                if (logo.empty()) logo = ShellIconDataUrl(*aumid);
                 cached = icons.emplace(name, std::move(logo)).first;
             }
             *icon = cached->second;
@@ -317,7 +318,12 @@ void PostStatus(const char* status) {
 struct Item {
     UINT32 id = 0;
     std::string app, title, text, icon;
+    std::wstring aumid; // identifiant de l'appli (pour la rouvrir au clic)
 };
+
+// Identifiants d'appli vus dans une notification : OpenApp refuse tout autre (la page ne peut pas lancer n'importe quoi).
+std::mutex g_aumidMutex;
+std::set<std::wstring> g_aumids;
 
 // Relève les notifications « toast » en cours. Renvoie false si le relevé a échoué.
 bool Poll(IListener* listener, std::vector<UINT32>& ids, std::vector<Item>* fresh, const std::set<UINT32>& seen,
@@ -337,7 +343,7 @@ bool Poll(IListener* listener, std::vector<UINT32>& ids, std::vector<Item>* fres
         if (!fresh || seen.count(id)) continue;
         Item it;
         it.id = id;
-        it.app = AppDetails(un.p, icons, &it.icon);
+        it.app = AppDetails(un.p, icons, &it.icon, &it.aumid);
         auto texts = Texts(un.p);
         if (!texts.empty()) it.title = texts[0];
         for (size_t k = 1; k < texts.size(); k++) it.text += (it.text.empty() ? "" : " ") + texts[k];
@@ -391,14 +397,31 @@ void Run(int gen) {
         if (fresh.size() > 3) fresh.erase(fresh.begin(), fresh.end() - 3); // rafale : les 3 dernières
         for (const auto& it : fresh) {
             if (it.title.empty() && it.text.empty()) continue;
+            if (!it.aumid.empty()) {
+                std::lock_guard<std::mutex> lock(g_aumidMutex);
+                g_aumids.insert(it.aumid);
+            }
             Post("{\"t\":\"appnotif\",\"app\":" + util::Json(it.app) + ",\"title\":" + util::Json(it.title) +
-                 ",\"text\":" + util::Json(it.text) + ",\"icon\":" + util::Json(it.icon) + "}");
+                 ",\"text\":" + util::Json(it.text) + ",\"icon\":" + util::Json(it.icon) +
+                 ",\"aumid\":" + util::Json(util::Narrow(it.aumid)) + "}");
         }
         for (const auto& it : fresh) seen.insert(it.id);
     }
 }
 
 } // namespace
+
+// Ouvre (ou ramène au premier plan) l'appli qui a posté une notification. L'action exacte de la notification
+// (conversation, lien) n'est pas lisible par l'API : on lance l'appli comme depuis le menu Démarrer.
+void OpenApp(const std::string& aumid) {
+    std::wstring w = util::Widen(aumid);
+    {
+        std::lock_guard<std::mutex> lock(g_aumidMutex);
+        if (w.empty() || !g_aumids.count(w)) return;
+    }
+    std::wstring target = L"shell:AppsFolder\\" + w;
+    ShellExecuteW(nullptr, L"open", target.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+}
 
 void SetEnabled(bool on) {
     if (on == g_running) return;

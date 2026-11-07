@@ -196,9 +196,17 @@ function notify(title, text, opts) {
 // Onglet à ouvrir quand on clique sur la pastille.
 const miniTab = () => (state.alerts ? 'reminders' : state.notice ? state.notice.tab || 'today' : state.lyric ? 'music' : 'timer');
 
+// Clic sur la pastille pendant une carte de notification d'appli : renvoie l'appli à ouvrir (sinon '') et fait
+// disparaître la carte. Le natif ne lance que des applis dont il a vu une notification.
+function takeNoticeApp() {
+  const aumid = state.notice?.card?.aumid || '';
+  if (aumid) clearNotice();
+  return aumid;
+}
+
 // Le dock s'ouvre : la notification a fait son temps.
 document.body.addEventListener('dockstate', (e) => {
   if (e.detail.st === 'bar' || e.detail.st === 'panel') clearNotice();
 });
 
-export { setMiniAlerts, setMiniTimer, setMiniLyric, showMiniNotice, notify, miniTab };
+export { setMiniAlerts, setMiniTimer, setMiniLyric, showMiniNotice, notify, miniTab, takeNoticeApp };

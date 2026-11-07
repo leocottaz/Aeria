@@ -96,6 +96,8 @@ void HandleMessage(const std::string& msg) {
         reminders::Check();
     } else if (cmd == "appnotifs") { // 1 = afficher les notifications des autres applis, 0 = arrêter
         appnotifs::SetEnabled(arg == "1");
+    } else if (cmd == "openapp") {
+        appnotifs::OpenApp(arg);
     } else if (cmd == "chime") { // son d'une notification affichée par la page
         if (dock::Cfg().sound) tray::Chime();
     } else if (cmd == "open") {

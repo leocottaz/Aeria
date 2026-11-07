@@ -7,7 +7,7 @@ import { fmtTime } from '../core/format.js';
 import { reminders, upcomingReminders, renderReminders, hasPendingReminders } from '../features/reminders.js';
 import { scrollChat, focusComposer, sendChat } from '../chat/chat.js';
 import { resumeMusicLoop } from '../features/music.js';
-import { setMiniAlerts, miniTab } from './mini.js';
+import { setMiniAlerts, miniTab, takeNoticeApp } from './mini.js';
 import { renderTimer, timerLabel, timerRinging } from '../features/timer.js';
 import { renderToday } from '../features/today.js';
 
@@ -142,7 +142,11 @@ function setupBar() {
   $('#np .np-text').addEventListener('click', () => openTab('music')); // toute la pilule ouvre la musique, sauf lecture/pause
   $('#mcardOpen').addEventListener('click', () => openTab('music'));
   $('#modeOpen').addEventListener('click', () => { openSettingsPage('modes'); openTab('settings'); }); // la croix (#modeStop) est gérée par modes.js
-  $('#pill').addEventListener('click', (e) => openTab(e.target.closest('#pillTimer') ? 'timer' : alertTab() || miniTab()));
+  $('#pill').addEventListener('click', (e) => {
+    const app = takeNoticeApp(); // carte d'une notification d'appli : on ouvre l'appli, pas le dock
+    if (app) { send('openapp', app); return; }
+    openTab(e.target.closest('#pillTimer') ? 'timer' : alertTab() || miniTab());
+  });
 }
 
 // Linux (WebKitGTK sous Plasma/Wayland) : la page peut être affichée agrandie (vue native de 960 px =
