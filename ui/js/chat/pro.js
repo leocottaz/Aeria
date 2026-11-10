@@ -77,11 +77,11 @@ async function onCcDone(cancelled, info) {
   if (!res || res.is_error) { rollback(ccErrorText(res, info), true); return; } // quota, connexion… : secours gratuit
   if (!blocks.some((b) => b.type === 'text') && res.result) blocks.push({ type: 'text', text: res.result });
   if (!blocks.length) { rollback('Réponse vide, réessaie.'); return; }
-  const shot = await commitCcAnswer(blocks);
-  if (shot && turn.loops < 2) { // une seule capture par demande, plus une de reprise au plus
+  const next = await commitCcAnswer(blocks);
+  if (next && turn.loops < 2) { // une seule capture ou lecture de notes par demande, plus une de reprise au plus
     turn.loops++;
     renderChat();
-    ccStep(`[Capture d'écran prise : ${shot}. Lis ce fichier avec l'outil Read, puis réponds à la demande de l'utilisateur. Ne prends pas d'autre capture.]`);
+    ccStep(next);
     return;
   }
   endTurn();
@@ -103,6 +103,11 @@ function actionToTool(kind, body) {
   if (kind === 'ouvrir') return ['open_file', { number: parseInt(body, 10) }];
   if (kind === 'site') return ['open_url', { url: body.trim() }];
   if (kind === 'ecran') return ['screenshot', {}];
+  if (kind === 'revue') return ['read_notes', {}];
+  if (kind === 'modif') { // numéro | raison | titre | contenu (qui peut contenir « | » ; « \n » = retour à la ligne)
+    const [number = '', reason = '', title = '', ...text] = fields;
+    return ['propose_note_edit', { note: parseInt(number, 10), reason, title, text: text.join(' | ').replace(/(\\)?\\n/g, (m, before) => (before ? m : '\n')) }]; // sans lookbehind (WebKitGTK ancien)
+  }
   if (kind === 'mode' || kind === 'routine') { // routine : ancien nom de la ligne
     return /^(stop|arr[eêè]t(er)?|fin)$/i.test(body.trim()) ? ['stop_mode', {}] : ['start_mode', { name: body.trim() }];
   }
@@ -135,7 +140,12 @@ async function commitCcAnswer(blocks) {
   convo.messages.push({ role: 'assistant', content });
   if (results.length) convo.messages.push({ role: 'user', content: results });
   // Capture prise : Claude Code ne voit l'image qu'en la lisant (Read), donc au tour suivant.
-  return results.map((r) => (r.is_error ? '' : String(r.content).match(/screens\/screen-\d+\.jpg/)?.[0] || '')).find(Boolean) || '';
+  const shot = results.map((r) => (r.is_error ? '' : String(r.content).match(/screens\/screen-\d+\.jpg/)?.[0] || '')).find(Boolean);
+  if (shot) return `[Capture d'écran prise : ${shot}. Lis ce fichier avec l'outil Read, puis réponds à la demande de l'utilisateur. Ne prends pas d'autre capture.]`;
+  // Notes lues : Claude Code ne les voit qu'au tour suivant, dans le message (voir [[revue|…]] dans prompts.js).
+  const read = results.find((r) => !r.is_error && content.find((c) => c.id === r.tool_use_id)?.name === 'read_notes');
+  if (read) return `[Notes de l'utilisateur lues par le dock :\n${read.content}\n]\nRéponds maintenant à la demande de l'utilisateur d'après ces notes. Pour proposer une modification, utilise [[modif|…]]. N'utilise plus [[revue|…]].`;
+  return '';
 }
 
 export { ccStep };

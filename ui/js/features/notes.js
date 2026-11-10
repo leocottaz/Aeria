@@ -107,6 +107,32 @@ function addNote(text = '') {
   return n;
 }
 
+// Pour la revue des notes par Claude (notereview.js) : lecture dans l'ordre de la grille, puis
+// remplacement du titre et/ou du contenu d'une note, accepté par l'utilisateur sur la carte du chat.
+const notesByRecent = () => [...notes].sort((a, b) => b.updated - a.updated);
+const getNote = (id) => notes.find((x) => x.id === id) || null;
+
+function updateNote(id, { title, html }) {
+  const n = getNote(id);
+  if (!n) return null;
+  if (cur === n) { clearTimeout(saveTimer); dirty = false; } // note ouverte : le remplacement l'emporte sur une frappe pas encore copiée
+  if (typeof title === 'string') n.title = title;
+  if (typeof html === 'string') n.html = sanitize(html);
+  n.updated = Date.now();
+  save();
+  if (cur === n) {
+    $('#neTitle').value = n.title;
+    body().innerHTML = sanitize(n.html) || '<p><br></p>';
+    syncEmpty();
+    showTime();
+  }
+  renderNotes();
+  return n;
+}
+
+// Copie dans la note ouverte ce qui est encore dans l'éditeur (sinon `updated` serait en retard).
+const flushOpenNote = () => commit();
+
 // ------------------------------------------------------------------ grille
 
 // Titre affiché : celui de la note, sinon sa première ligne (notes écrites par Claude ou anciennes).
@@ -409,4 +435,4 @@ function setupNotes() {
   save(); // enregistre la migration de l'ancien format
 }
 
-export { addNote, renderNotes, setupNotes };
+export { addNote, renderNotes, setupNotes, sanitize, notesByRecent, getNote, updateNote, flushOpenNote };

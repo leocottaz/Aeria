@@ -10,6 +10,7 @@ import { switchTab, openTab } from '../dock/dock.js';
 import { contextBlock, remindersContext, todosContext, stripActions } from './prompts.js';
 import { foundFor, foundContext, openPath, folderOf, fmtDay } from '../features/files.js';
 import { shotFor } from '../features/screen.js';
+import { editCardHTML, applyProposal, refuseProposal } from '../features/notereview.js';
 import { md } from './markdown.js';
 import { streamStep } from './api.js';
 import { ccStep } from './pro.js';
@@ -200,6 +201,11 @@ function toolHTML(b, res, live) {
     ic = 'note';
     title = state('Note ajoutée', 'Ajout de la note…', 'Note non ajoutée');
     detail = inp.text || '';
+  } else if (b.name === 'read_notes') {
+    ic = 'note';
+    title = state('Notes relues', 'Lecture des notes…', 'Lecture impossible');
+  } else if (b.name === 'propose_note_edit') {
+    return editCardHTML(b, res);
   } else if (b.name === 'create_todo') {
     ic = 'todo';
     title = state('Tâche ajoutée', 'Ajout de la tâche…', 'Tâche non ajoutée');
@@ -413,6 +419,13 @@ function setupChat() {
   $('#chat').addEventListener('click', (e) => {
     const sug = e.target.closest('[data-suggest]');
     if (sug) { sendChat(sug.textContent); return; }
+    const edit = e.target.closest('[data-noteedit]');
+    if (edit) { // carte « modification de note proposée » : rien n'est écrit avant ce clic
+      const { noteedit, key } = edit.dataset;
+      if (noteedit === 'apply') { const msg = applyProposal(key); if (msg) toast(msg); } else refuseProposal(key);
+      renderChat();
+      return;
+    }
     const file = e.target.closest('[data-open]');
     if (file) { openPath(file.dataset.open); return; }
     const link = e.target.closest('a[href]');
