@@ -31,6 +31,7 @@ struct Key {
 constexpr Key kKeys[] = {
     {"settings", true}, {"reminders", true}, {"notes", true}, {"todos", true}, {"convo", true}, {"modes", true},
     {"activeMode", false}, {"timer", false}, {"welcomed", false}, {"lastSeenVersion", false},
+    {"mcp", true}, // serveurs MCP de l'utilisateur (commande, arguments, variables d'environnement) et outils toujours autorisés
 };
 
 constexpr size_t kMaxSize = 64u << 20; // une conversation avec images réduites reste très en dessous

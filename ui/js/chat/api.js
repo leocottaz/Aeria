@@ -3,7 +3,7 @@ import { toast } from '../core/util.js';
 import { http, apiErrorText } from '../core/bridge.js';
 import { settings, apiModel } from '../core/settings.js';
 import { convo, turn, saveConvo, handleEvent, rollback, endTurn, setStreaming, renderChat, scheduleLive } from './chat.js';
-import { TOOLS, execTool } from './tools.js';
+import { allTools, execTool } from './tools.js';
 import { buildSystem } from './prompts.js';
 
 // Outil serveur : l'API lance elle-même les recherches (facturées à part) et renvoie les résultats dans le flux.
@@ -23,7 +23,7 @@ function streamStep() {
     output_config: { effort: settings.effort },
     cache_control: { type: 'ephemeral' },
     system: buildSystem('api'),
-    tools: [...TOOLS.filter((t) => t.name !== 'screenshot' || settings.screenAccess), ...(settings.webSearch ? [WEB_SEARCH_TOOL] : [])],
+    tools: [...allTools().filter((t) => t.name !== 'screenshot' || settings.screenAccess), ...(settings.webSearch ? [WEB_SEARCH_TOOL] : [])],
     messages: convo.messages.map(({ role, content }) => ({ role, content })), // sans nos champs (via)
   };
   // Repli automatique côté serveur si le modèle décline (pas disponible pour Haiku).

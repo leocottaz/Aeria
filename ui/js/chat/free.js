@@ -7,7 +7,8 @@ import { http } from '../core/bridge.js';
 import { settings } from '../core/settings.js';
 import { S } from '../core/state.js';
 import { convo, turn, saveConvo, rollback, endTurn, setStreaming, renderChat, scheduleLive } from './chat.js';
-import { TOOLS, execTool } from './tools.js';
+import { allTools, execTool } from './tools.js';
+import { isMcpTool, simpleSchema } from '../features/mcp.js';
 import { buildSystem, stripActions } from './prompts.js';
 
 const SERVICES = {
@@ -75,9 +76,10 @@ const knownModels = (svc = service()) => models[svc] || [];
 // ------------------------------------------------------------------ conversion
 
 // Capture d'écran : seulement pour les services qui lisent les images (pas Groq), si l'utilisateur l'autorise.
-const toolsForOpenAI = () => TOOLS.filter((t) => t.name !== 'screenshot' || (settings.screenAccess && service() !== 'groq')).map((t) => ({
+const toolsForOpenAI = () => allTools().filter((t) => t.name !== 'screenshot' || (settings.screenAccess && service() !== 'groq')).map((t) => ({
   type: 'function',
-  function: { name: t.name, description: t.description, parameters: stripSchema(t.input_schema) },
+  // Les schémas des serveurs MCP viennent de tiers : réduits à l'essentiel, un seul schéma exotique ferait refuser toute la requête.
+  function: { name: t.name, description: t.description, parameters: isMcpTool(t.name) ? simpleSchema(t.input_schema) : stripSchema(t.input_schema) },
 }));
 
 // Gemini refuse additionalProperties dans les schémas : on le retire partout.

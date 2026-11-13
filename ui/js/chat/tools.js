@@ -12,6 +12,7 @@ import { addTodo, completeTodo, openTodos, doneTodos } from '../features/todo.js
 import { searchFiles, openFound, describeFound } from '../features/files.js';
 import { findMode, startMode, stopMode, modeNames, behaviorNames } from '../features/modes.js';
 import { startCountdown, startStopwatch, pauseTimer, resumeTimer, stopTimer } from '../features/timer.js';
+import { mcpTools, isMcpTool, callMcpTool } from '../features/mcp.js';
 
 const TOOLS = [
   {
@@ -207,8 +208,12 @@ const TOOLS = [
   },
 ];
 
+// Outils d'Aeria + ceux des serveurs MCP prêts (features/mcp.js, leurs noms commencent par mcp__).
+const allTools = () => [...TOOLS, ...mcpTools()];
+
 // key : identifiant du bloc tool_use (les résultats d'une recherche sont rangés sous cette clé).
 async function execTool(name, input, key = '') {
+  if (isMcpTool(name)) return callMcpTool(name, input, key); // confirmation de l'utilisateur comprise
   if (name === 'search_files') {
     const results = await searchFiles(input, key);
     return describeFound(results);
@@ -306,4 +311,4 @@ async function execTool(name, input, key = '') {
   throw new Error(`Outil inconnu : ${name}`);
 }
 
-export { TOOLS, execTool };
+export { TOOLS, allTools, execTool };

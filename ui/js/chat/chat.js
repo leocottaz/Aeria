@@ -11,6 +11,7 @@ import { contextBlock, remindersContext, todosContext, stripActions } from './pr
 import { foundFor, foundContext, openPath, folderOf, fmtDay } from '../features/files.js';
 import { shotFor } from '../features/screen.js';
 import { editCardHTML, applyProposal, refuseProposal } from '../features/notereview.js';
+import { isMcpTool, mcpToolHTML, resolveApproval, denyAll, onApprovalRequest } from '../features/mcp.js';
 import { md } from './markdown.js';
 import { streamStep } from './api.js';
 import { ccStep } from './pro.js';
@@ -189,6 +190,7 @@ function thinkingHTML(b, active) {
 }
 
 function toolHTML(b, res, live) {
+  if (isMcpTool(b.name)) return mcpToolHTML(b, res); // outil d'un serveur MCP : carte de confirmation, puis résultat
   const inp = b.input || {};
   const err = res?.is_error;
   const state = (okLabel, pendingLabel, errLabel) => (res ? (err ? errLabel : okLabel) : pendingLabel);
@@ -401,7 +403,11 @@ function setupChat() {
   });
   $('#chatForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    if (turn) { send('cancel', turn.reqId); return; }
+    if (turn) { // « Arrêter » : un appel d'outil MCP en attente de confirmation est refusé, sinon on annule la requête
+      if (denyAll()) renderChat();
+      else send('cancel', turn.reqId);
+      return;
+    }
     const text = input.value;
     if (!text.trim() && !hasAttachments()) return;
     input.value = '';
@@ -426,6 +432,12 @@ function setupChat() {
       renderChat();
       return;
     }
+    const ask = e.target.closest('[data-mcpask]');
+    if (ask) { // carte « autoriser cet outil MCP ? » : rien ne s'exécute avant ce clic
+      resolveApproval(ask.dataset.key, ask.dataset.mcpask);
+      renderChat();
+      return;
+    }
     const file = e.target.closest('[data-open]');
     if (file) { openPath(file.dataset.open); return; }
     const link = e.target.closest('a[href]');
@@ -435,6 +447,7 @@ function setupChat() {
       navigator.clipboard?.writeText(text).then(() => toast('Copié'), () => toast('Copie impossible'));
     }
   });
+  onApprovalRequest(() => { if (turn) { renderChat(); scrollChat(false); } }); // carte « autoriser cet outil MCP ? » à montrer tout de suite
   setupAttach(() => { openTab('claude'); focusComposer(); });
   $('[data-goto="settings"]').addEventListener('click', () => { switchTab('settings'); openSettingsPage('aeria'); });
 }

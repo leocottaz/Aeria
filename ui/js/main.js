@@ -17,6 +17,7 @@ import { onMedia, setupMusic, connectMusic, previewLyrics, fetchLyrics, guessTra
 import { setupUpdater, onUpdateInit, onUpdateMessage, showChangelog } from './features/updater.js';
 import { onVoice, setupVoice, syncVoice } from './features/voice.js';
 import { onAppNotif, onAppNotifsStatus, setupAppNotifs, syncAppNotifs } from './features/appnotifs.js';
+import { setupMcp, onMcp } from './features/mcp.js';
 
 function onNative(m) {
   switch (m.t) {
@@ -63,6 +64,7 @@ function onNative(m) {
     case 'voice': onVoice(m); break;
     case 'appnotif': onAppNotif(m); break; // notification d'une autre appli (Windows)
     case 'appnotifs': onAppNotifsStatus(m); break; // l'écoute est active, refusée ou impossible
+    case 'mcp': onMcp(m); break; // serveur MCP : démarré, ligne JSON-RPC, arrêté
     case 'reply': onReply(m); break;
     case 'hotkey': switchTab('claude'); focusComposer(); break;
     case 'show': switchTab(m.tab); if (m.tab === 'claude') focusComposer(); break;
@@ -88,6 +90,7 @@ function init() {
   setupUpdater();
   setupVoice();
   setupAppNotifs();
+  setupMcp();
   renderSettings();
   renderKey();
   renderCc();

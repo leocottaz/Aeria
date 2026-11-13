@@ -206,3 +206,22 @@ html.linux #fullscreenRevealRow { display: none; } /* Linux : pas de détection 
 .voice-bar { display: block; height: 4px; border-radius: 2px; background: var(--field); overflow: hidden; }
 .voice-bar > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .3s var(--smooth); }
 #voiceStatus.error { color: #ff7a7a; }
+
+/* Serveurs MCP (js/features/mcp.js) : une carte par serveur. Préfixe mcp- ; .amode et .tool existent déjà ailleurs. */
+.mcp-srv { display: flex; flex-direction: column; gap: 7px; margin-bottom: 9px; padding: 9px; border: 1px solid var(--stroke); border-radius: 13px; background: var(--glass-b); }
+.mcp-head { display: flex; align-items: center; gap: 8px; }
+.mcp-head input[data-f=name] { flex: 1; min-width: 0; font-weight: 600; }
+.mcp-status { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; color: var(--fg2); font-size: 12px; }
+.mcp-status .ok { color: #3ddc84; font-weight: 600; }
+.mcp-status .bad { color: #ff7b8a; font-weight: 600; }
+.mcp-err { color: var(--fg2); overflow-wrap: anywhere; }
+.mcp-srv input:not([type=checkbox]), .mcp-srv textarea { width: 100%; font: 12px var(--mono); }
+.mcp-srv .toggle-row { border-top: 0; min-height: 34px; }
+.mcp-tool { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 0; border-top: 1px solid var(--stroke); font-size: 12px; }
+.mcp-tool > span { display: flex; flex-direction: column; min-width: 0; }
+.mcp-tool b { font-weight: 600; overflow-wrap: anywhere; }
+.mcp-tool em { color: var(--fg3); font-size: 10.5px; font-style: normal; }
+.mcp-tool small { color: var(--fg3); font-size: 11px; overflow-wrap: anywhere; }
+.mcp-tool .ghost { flex: none; height: 24px; padding: 0 9px; font-size: 11px; }
+.mcp-actions { display: flex; justify-content: flex-end; }
+.mcp-actions .ghost { height: 28px; padding: 0 12px; font-size: 12px; }

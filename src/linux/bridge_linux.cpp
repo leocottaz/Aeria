@@ -11,6 +11,7 @@
 #include "common/data_store.h"
 #include "common/util.h"
 #include "features/appnotifs.h"
+#include "features/mcp.h"
 #include "features/media.h"
 #include "features/pc.h"
 #include "features/reminders.h"
@@ -144,6 +145,14 @@ void HandleMessage(const std::string& msg) {
         claude_code::CheckInstalled();
     } else if (cmd == "cclogin") {
         claude_code::OpenLogin();
+
+    // --- serveurs MCP (stdio) de l'utilisateur
+    } else if (cmd == "mcpstart") { // id \x1f commande \x1f arguments \x1f environnement (voir features/mcp.h)
+        mcp::Start(arg);
+    } else if (cmd == "mcpsend") { // id \n ligne JSON
+        mcp::Send(arg);
+    } else if (cmd == "mcpstop") { // id (vide = tous)
+        mcp::Stop(arg);
 
     // --- commun
     } else if (cmd == "cancel") {

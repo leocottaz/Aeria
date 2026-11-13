@@ -116,6 +116,9 @@ Modules ES (`<script type="module" src="js/boot.js">`, qui charge d'abord les do
 | `config` | lignes `clé=valeur` | `mode`, `revealDelay`, `hideDelay`, `width`, `panelH`, `theme`, `sound`, `autostart`, `fullscreenReveal` (Windows : le bord haut ouvre le dock devant une appli plein écran), `miniLyrics` (garde la page éveillée, dock caché, pendant une lecture : pilule de paroles ou carte musique). |
 | `loadstore` | — | Démarrage de la page (avant `ready`) : le natif répond `store` avec tous les fichiers de données. |
 | `savestore` | clé, JSON | Écrit `data/<clé>.json` (`common/data_store.*`). Refusé (message `storefail`) si la clé est inconnue, le JSON invalide ou le disque en échec. |
+| `mcpstart` | `id \x1f commande \x1f arguments \x1f environnement` (listes séparées par `\x1e`) | Lance un serveur MCP « stdio » de l'utilisateur (`features/mcp.*`) : processus caché, sans shell (`.cmd`/`.bat` via `cmd.exe`, arguments `& \| < > ^ % ! "` refusés), `ANTHROPIC_API_KEY` retirée, dossier `…/Aeria/mcp`, tué avec le dock. 8 serveurs au plus ; relancer un `id` arrête l'ancien. |
+| `mcpsend` | `id`, ligne JSON | Écrit une ligne sur le stdin du serveur (une seule ligne, file de 64 messages). Le natif ne comprend pas JSON-RPC : le protocole MCP (`initialize`, `tools/list`, `tools/call`) est dans `ui/js/features/mcp.js`. |
+| `mcpstop` | `id` (vide = tous) | Arrête un serveur (SIGTERM puis SIGKILL sous Linux ; job Windows). |
 | `open` / `bar` / `hide` | — | Ouvre le panneau / replie sur la barre / masque. |
 | `pin` | `0`/`1` | Garder affiché. |
 | `hold` | ms | Empêche le repli automatique pendant ms. |
@@ -169,6 +172,7 @@ Modules ES (`<script type="module" src="js/boot.js">`, qui charge d'abord les do
 | `media` | `active`, `app`, `title`, `artist`, `album`, `status`, `pos`, `dur`, `at`, `canNext`, `canPrev`, `canSeek`, (`art` : data URL, seulement au changement de morceau) | Musique suivie. `pos` est la position (ms) à l'instant `at` (ms epoch). |
 | `appnotifs` | `status` (`allowed`, `denied`, `unsupported`, `error`) | Résultat du démarrage de l'écoute des notifications des autres applis. Sur tout sauf `allowed`, la page désactive le réglage. |
 | `appnotif` | `app`, `title`, `text`, `icon` (data URL PNG du logo, vide si introuvable), `aumid` | Une notification d'une autre appli vient d'arriver : la page l'affiche en carte (logo, titre, texte dessous) (la page est d'abord sortie de veille : `PostToPageAwake`). |
+| `mcp` | `id`, `gen`, `ev` (`started`, `line` + `data`, `fail` + `msg`, `exit` + `code`/`stderr`) | Évènement d'un serveur MCP. `gen` change à chaque lancement d'un même `id` : la page ignore les évènements d'une génération périmée (l'`exit` de l'ancien processus arrive après le `started` du nouveau). |
 | `hotkey`, `show` | (`tab`) | Ouverture par raccourci ou menu de l'icône. |
 | `reply` | `id`, `ok`, (`error`, `results`, `path`) | Réponse à une commande `ask()` (`search`, `pickfile`). |
 | `wheel` | `x`, `y`, `dy` | Linux : molette, en crans, à la position (`x`, `y`) de la page. |

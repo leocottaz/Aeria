@@ -21,6 +21,7 @@ add_executable(Aeria
         src/linux/media_linux.cpp           # lecteur : MPRIS2
         src/linux/appnotifs_linux.cpp       # notifications des autres applis : pas encore prises en charge
         src/linux/pc_linux.cpp              # fichiers, routines, volume
+        src/linux/mcp_linux.cpp             # serveurs MCP (stdio) de l'utilisateur : fork/exec et lignes JSON
         src/linux/screen_linux.cpp          # capture d'écran (X11) pour l'assistante
         src/features/reminders.cpp          # échéances des rappels et du minuteur (partagé avec Windows)
         src/features/updater_common.cpp     # version et vérification des mises à jour (partagé avec Windows)

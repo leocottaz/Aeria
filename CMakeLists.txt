@@ -45,6 +45,7 @@ add_executable(Aeria WIN32
         src/features/media.cpp          # lecteur : musique en cours via Windows
         src/features/appnotifs.cpp      # notifications des autres applis (UserNotificationListener)
         src/features/pc.cpp             # recherche de fichiers, routines, volume
+        src/features/mcp.cpp            # serveurs MCP (stdio) de l'utilisateur : processus et lignes JSON
         src/features/screen.cpp         # capture d'écran (sans le dock) pour l'assistante
         src/features/updater.cpp        # mise à jour : télécharge, vérifie et lance Setup.exe
         src/features/updater_common.cpp # version, tag, SHA256SUMS (partagé avec Linux)

@@ -58,6 +58,7 @@ const ICONS = {
   quote: '<path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/><path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/>',
   highlighter: '<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
   eraser: '<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
+  plug: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
   snooze:'<path d="M10 2h4"/><path d="M12 14v-4"/><path d="M4 13a8 8 0 0 1 8-7 8 8 0 1 1-5.3 14L4 17.6"/><path d="M9 17H4v5"/>',
 };
 
@@ -72,7 +73,7 @@ function hydrateIcons(root = document) {
 // Elles survivent aux mises à jour et à une réinitialisation du profil du navigateur, contrairement au localStorage.
 // À garder identique à `kKeys` du natif. Les autres clés (caches, état de la vérification des mises à jour…)
 // restent dans le localStorage : les perdre ne coûte rien.
-const FILE_KEYS = new Set(['settings', 'reminders', 'notes', 'todos', 'convo', 'modes', 'activeMode', 'timer', 'welcomed', 'lastSeenVersion']);
+const FILE_KEYS = new Set(['settings', 'reminders', 'notes', 'todos', 'convo', 'modes', 'activeMode', 'timer', 'welcomed', 'lastSeenVersion', 'mcp']);
 let fileMode = false; // vrai une fois les fichiers reçus du natif (js/boot.js) ; faux dans l'aperçu navigateur
 const fileText = {};  // clé → texte JSON, comme le renvoie le natif
 

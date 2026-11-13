@@ -243,3 +243,9 @@ body.dropping .chat-composer { border-color: color-mix(in srgb, var(--accent) 55
 
 /* Capture d'écran envoyée à Aeria : miniature dans la carte (jamais enregistrée). */
 .tool .shot { display: block; width: min(260px, 100%); margin-top: 6px; border: 1px solid var(--stroke); border-radius: 8px; }
+
+/* Carte « autoriser cet outil MCP ? » (js/features/mcp.js) */
+.tool.mcpask { align-items: flex-start; }
+.tool.mcpask > .ic { margin-top: 2px; }
+.tool .mcp-args { max-height: 140px; margin: 7px 0 0; padding: 6px 8px; overflow: auto; border: 1px solid var(--stroke); border-radius: 9px; background: var(--field); color: var(--fg2); font: 11.5px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.tool.mcpask .ne-btns { flex-wrap: wrap; }
