@@ -83,6 +83,8 @@ void HandleMessage(const std::string& msg) {
         dock::ShowBar();
     } else if (cmd == "hide") {
         dock::HideByUser();
+    } else if (cmd == "dockdrag") {
+        dock::BeginDrag();
     } else if (cmd == "pin") {
         dock::SetPinned(arg == "1");
     } else if (cmd == "hold") {

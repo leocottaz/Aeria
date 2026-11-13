@@ -125,17 +125,43 @@ double Scale() {
 
 int Px(int dip) { return (int)std::lround(dip * Scale()); }
 
+// Largeur visible du dock dans l'état s (DIP, sans les marges d'évasement).
+int StateW(State s) {
+    switch (s) {
+        case State::Hidden: return g_cfg.mode == 1 ? kTabW : kStripW;
+        case State::Progress: return kStripW;
+        case State::Peek: return kTabW;
+        case State::Mini: return g_miniW;
+        case State::Music: return g_musicW;
+        case State::Listen: return g_pillW;
+        case State::Bar:
+        case State::Panel: break;
+    }
+    return g_cfg.width;
+}
+
+// Décalage voulu (DIP), borné pour qu'un dock large de wDip reste entièrement sur l'écran courant :
+// une pastille étroite va plus loin vers le bord que le dock ouvert (qui se recale alors en s'ouvrant).
+int ClampOffset(int dip, int wDip) {
+    RECT m = MonitorRect();
+    int room = std::max(0, (int)std::lround(((m.right - m.left) / Scale() - wDip) / 2));
+    return std::clamp(dip, -room, room);
+}
+
+// Centre horizontal d'un dock large de wDip : celui de l'écran, décalé par l'utilisateur (glisser au clic droit).
+int CenterX(const RECT& m, int wDip) { return (m.left + m.right) / 2 + Px(ClampOffset(g_cfg.dockX, wDip)); }
+
 RECT TargetRect(State s) {
     RECT m = MonitorRect();
-    int cx = (m.left + m.right) / 2;
-    int w = g_cfg.width, h = kInset;
+    int w = StateW(s), h = kInset;
+    int cx = CenterX(m, w);
     switch (s) {
-        case State::Hidden: w = g_cfg.mode == 1 ? kTabW : kStripW; h = kInset; break;
-        case State::Progress: w = kStripW; h = kInset + kStripH; break;
-        case State::Peek: w = kTabW; h = kInset + kTabH; break;
-        case State::Mini: w = g_miniW; h = kInset + g_miniH; break;
-        case State::Music: w = g_musicW; h = kInset + kMusicH; break;
-        case State::Listen: w = g_pillW; h = kInset + g_pillH; break;
+        case State::Hidden: h = kInset; break;
+        case State::Progress: h = kInset + kStripH; break;
+        case State::Peek: h = kInset + kTabH; break;
+        case State::Mini: h = kInset + g_miniH; break;
+        case State::Music: h = kInset + kMusicH; break;
+        case State::Listen: h = kInset + g_pillH; break;
         case State::Bar: h = kInset + kBarH; break;
         case State::Panel: h = kInset + kBarH + g_cfg.panelH; break;
     }
@@ -280,13 +306,44 @@ void FollowMouse(POINT p) {
 bool g_wasFocused = false;
 bool g_marginClick = false; // clic dans la marge transparente : le focus de la fenêtre ne garde pas le dock ouvert
 
+// Déplacement au clic droit : la page signale le clic (BeginDrag), puis chaque passage de Poll suit la souris
+// tant que le bouton est enfoncé. Le dock ne bouge que horizontalement, sur son écran.
+bool g_dragging = false;
+LONG g_dragStartX = 0;
+int g_dragStartOffset = 0;
+
+void EndDrag() {
+    if (!g_dragging) return;
+    g_dragging = false;
+    g_outsideSince = 0;
+    // La page enregistre la position (réglage dockX) ; l'écho de sendConfig ne change plus rien.
+    bridge::PostToPage("{\"t\":\"dockx\",\"x\":" + std::to_string(g_cfg.dockX) + "}");
+}
+
+void DragStep(POINT p) {
+    if (!(GetAsyncKeyState(VK_RBUTTON) & 0x8000)) {
+        EndDrag();
+        return;
+    }
+    int off = g_dragStartOffset + (int)std::lround((p.x - g_dragStartX) / Scale());
+    if (std::abs(off) < 12) off = 0; // aimant au centre de l'écran
+    off = ClampOffset(off, StateW(g_state));
+    if (off == g_cfg.dockX) return;
+    g_cfg.dockX = off;
+    PlaceWindow(TargetRect(g_state));
+}
+
 // Surveille la souris : bord haut de l'écran, survol, repli automatique.
 void Poll() {
     POINT p;
     GetCursorPos(&p);
+    if (g_dragging) {
+        DragStep(p);
+        return;
+    }
     FollowMouse(p);
     RECT m = MonitorRect();
-    int cx = (m.left + m.right) / 2, half = Px(g_cfg.width) / 2;
+    int cx = CenterX(m, StateW(g_state)), half = Px(g_cfg.width) / 2;
     bool fullscreen = ForegroundIsFullscreen();
     bool mouseDown = GetAsyncKeyState(VK_LBUTTON) & 0x8000;
     // Un vrai bord : pas d'autre écran juste au-dessus (sinon la souris ne fait que passer).
@@ -577,6 +634,7 @@ void ApplyConfig(const std::string& payload) {
         else if (k == "hideDelay") c.hideDelay = std::clamp(n, 150, 10000);
         else if (k == "width") c.width = std::clamp(n, 480, 1200);
         else if (k == "panelH") c.panelH = std::clamp(n, 320, 900);
+        else if (k == "dockX") c.dockX = g_dragging ? g_cfg.dockX : std::clamp(n, -4000, 4000); // pas d'écho périmé pendant un déplacement
         else if (k == "theme") c.dark = v != "light";
         else if (k == "sound") c.sound = v == "1";
         else if (k == "autostart") wantAutostart = v == "1";
@@ -588,7 +646,7 @@ void ApplyConfig(const std::string& payload) {
     if (!wantModel.empty()) voice::SetModel(wantModel); // avant Apply : l'écoute démarre avec le bon modèle
     if (wantVoice >= 0) voice::Apply(wantVoice == 1);
     bool themeChanged = c.dark != g_cfg.dark;
-    bool geometryChanged = c.mode != g_cfg.mode || c.width != g_cfg.width || c.panelH != g_cfg.panelH;
+    bool geometryChanged = c.mode != g_cfg.mode || c.width != g_cfg.width || c.panelH != g_cfg.panelH || c.dockX != g_cfg.dockX;
     g_cfg = c;
     if (wantAutostart != autostartOn) autostart::Set(wantAutostart);
     if (themeChanged) ApplyBackdrop();
@@ -635,6 +693,20 @@ void SetPinned(bool pinned) {
 }
 
 void HoldFor(int ms) { g_holdUntil = GetTickCount64() + std::max(0, ms); }
+
+void BeginDrag() {
+    if (g_dragging || g_state == State::Hidden || !(GetAsyncKeyState(VK_RBUTTON) & 0x8000)) return;
+    POINT p;
+    GetCursorPos(&p);
+    if (g_anim.active) { // on saisit le dock en pleine animation : elle s'arrête, il prend sa taille finale
+        g_anim.active = false;
+        KillTimer(g_hwnd, TIMER_ANIM);
+        PlaceWindow(TargetRect(g_state));
+    }
+    g_dragging = true;
+    g_dragStartX = p.x;
+    g_dragStartOffset = g_cfg.dockX;
+}
 
 void SetMini(int widthDip, bool notice, int heightDip) {
     int w = widthDip > 0 ? std::clamp(widthDip, 40, 640) : 0; // 40 : la cloche seule

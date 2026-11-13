@@ -103,6 +103,8 @@ void HandleMessage(const std::string& msg) {
         if (dock::Cfg().sound) tray::Chime();
     } else if (cmd == "open") {
         dock::OpenPanel();
+    } else if (cmd == "dockdrag") {
+        dock::BeginDrag();
     } else if (cmd == "hide") {
         dock::HideByUser();
     } else if (cmd == "log") { // diagnostic de la page (AERIA_DEBUG=1)

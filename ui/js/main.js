@@ -1,7 +1,7 @@
 // Point d'entrée : branche les modules et route les messages du natif.
 import { $, store, toast, hydrateIcons } from './core/util.js';
 import { bridge, send, http, onReply } from './core/bridge.js';
-import { settings, adoptNative, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange } from './core/settings.js';
+import { settings, setSetting, adoptNative, sendConfig, applyAppearance, renderSettings, setupSettings, openSettingsPage, onSettingChange } from './core/settings.js';
 import { S } from './core/state.js';
 import { checkClaudeCode, renderCc, renderKey, renderFree, testFree, onFreeKey, setupConnection } from './chat/connection.js';
 import { knownModels } from './chat/free.js';
@@ -39,6 +39,10 @@ function onNative(m) {
       break;
     case 'state': setState(m.s, m); break;
     case 'wheel': onWheel(m); break;
+    case 'dockx': // fin d'un déplacement au clic droit : on garde la position
+      document.documentElement.classList.remove('moving');
+      setSetting('dockX', m.x);
+      break;
     case 'key':
       S.hasKey = m.hasKey;
       S.keyHint = m.keyHint;

@@ -130,13 +130,40 @@ GdkMonitor* Monitor() {
     return g_monitor;
 }
 
-// Pointeur global (X11) : position et bouton gauche enfoncé.
-void Pointer(int& x, int& y, bool& leftDown) {
+// Pointeur global (X11) : position et boutons gauche / droit enfoncés.
+void Pointer(int& x, int& y, bool& leftDown, bool* rightDown = nullptr) {
     GdkSeat* seat = gdk_display_get_default_seat(GdkDisp());
     GdkDevice* dev = gdk_seat_get_pointer(seat);
     GdkModifierType mask{};
     gdk_window_get_device_position(gdk_get_default_root_window(), dev, &x, &y, &mask);
     leftDown = mask & GDK_BUTTON1_MASK;
+    if (rightDown) *rightDown = mask & GDK_BUTTON3_MASK;
+}
+
+// Centre horizontal du dock sur l'écran m : le centre de l'écran, décalé par l'utilisateur (glisser au clic droit),
+// borné pour que le dock reste entièrement sur l'écran.
+// borné pour qu'un dock large de w reste entièrement sur l'écran : une pastille étroite va plus loin vers le bord
+// que le dock ouvert (qui se recale alors en s'ouvrant).
+int ClampOffset(const Rect& m, int off, int w) {
+    int room = std::max(0, (m.r - m.l - w) / 2);
+    return std::clamp(off, -room, room);
+}
+
+int CenterOf(const Rect& m, int w) { return (m.l + m.r) / 2 + ClampOffset(m, g_cfg.dockX, w); }
+
+// Largeur visible du dock dans l'état s.
+int StateW(State s) {
+    switch (s) {
+        case State::Hidden: return g_cfg.mode == 1 ? kTabW : kStripW;
+        case State::Progress: return kStripW;
+        case State::Peek: return kTabW;
+        case State::Mini: return g_miniW;
+        case State::Music: return g_musicW;
+        case State::Listen: return g_pillW;
+        case State::Bar:
+        case State::Panel: break;
+    }
+    return g_cfg.width;
 }
 
 bool AnyMonitorContains(int x, int y) {
@@ -190,7 +217,7 @@ void RebuildEdges() {
     g_onEdge = false;
     for (int i = 0; i < gdk_display_get_n_monitors(GdkDisp()); ++i) {
         Rect m = GeometryOf(gdk_display_get_monitor(GdkDisp(), i));
-        int cx = (m.l + m.r) / 2;
+        int cx = CenterOf(m, g_cfg.width);
         if (AnyMonitorContains(cx, m.t - 1)) continue;
         GtkWidget* edge = gtk_window_new(GTK_WINDOW_POPUP); // hors gestionnaire de fenêtres : ni focus, ni placement imposé
         gtk_widget_set_app_paintable(edge, TRUE);
@@ -209,15 +236,15 @@ void RebuildEdges() {
 
 Rect TargetRect(State s) {
     Rect m = GeometryOf(Monitor());
-    int cx = (m.l + m.r) / 2;
-    int w = g_cfg.width, h = kInset;
+    int w = StateW(s), h = kInset;
+    int cx = CenterOf(m, w);
     switch (s) {
-        case State::Hidden: w = g_cfg.mode == 1 ? kTabW : kStripW; h = kInset; break;
-        case State::Progress: w = kStripW; h = kInset + kStripH; break;
-        case State::Peek: w = kTabW; h = kInset + kTabH; break;
-        case State::Mini: w = g_miniW; h = kInset + g_miniH; break;
-        case State::Music: w = g_musicW; h = kInset + kMusicH; break;
-        case State::Listen: w = g_pillW; h = kInset + g_pillH; break;
+        case State::Hidden: h = kInset; break;
+        case State::Progress: h = kInset + kStripH; break;
+        case State::Peek: h = kInset + kTabH; break;
+        case State::Mini: h = kInset + g_miniH; break;
+        case State::Music: h = kInset + kMusicH; break;
+        case State::Listen: h = kInset + g_pillH; break;
         case State::Bar: h = kInset + kBarH; break;
         case State::Panel: h = kInset + kBarH + g_cfg.panelH; break;
     }
@@ -417,11 +444,43 @@ void FollowMouse(int x, int y) {
     SetState(RestState(), true);
 }
 
+// Déplacement au clic droit : la page signale le clic (BeginDrag), puis chaque passage de Poll suit la souris
+// tant que le bouton est enfoncé. Le dock ne bouge que horizontalement, sur son écran.
+bool g_dragging = false;
+int g_dragStartX = 0, g_dragStartOffset = 0;
+gint64 g_dragSince = 0;
+
+void EndDrag() {
+    if (!g_dragging) return;
+    g_dragging = false;
+    g_outsideSince = 0;
+    RebuildEdges(); // les bandes du bord haut suivent le dock (XWayland)
+    bridge::PostToPage("{\"t\":\"dockx\",\"x\":" + std::to_string(g_cfg.dockX) + "}"); // la page enregistre le réglage dockX
+}
+
+void DragStep(int px, bool rightDown) {
+    // Garde-fou : sous XWayland, un pointeur figé ne dirait jamais que le bouton est relâché.
+    if (!rightDown || NowMs() - g_dragSince > 60000) {
+        EndDrag();
+        return;
+    }
+    int off = g_dragStartOffset + (px - g_dragStartX);
+    if (std::abs(off) < 12) off = 0; // aimant au centre de l'écran
+    off = ClampOffset(GeometryOf(Monitor()), off, StateW(g_state));
+    if (off == g_cfg.dockX) return;
+    g_cfg.dockX = off;
+    PlaceWindow(TargetRect(g_state));
+}
+
 // Surveille la souris : bord haut de l'écran, survol, repli automatique (toutes les 30 ms).
 gboolean Poll(gpointer) {
     int px, py;
-    bool mouseDown;
-    Pointer(px, py, mouseDown);
+    bool mouseDown, rightDown;
+    Pointer(px, py, mouseDown, &rightDown);
+    if (g_dragging) {
+        if (PointerKnown()) DragStep(px, rightDown);
+        return G_SOURCE_CONTINUE;
+    }
     if (PointerKnown()) {
         FollowMouse(px, py);
     } else { // position périmée : la souris est ailleurs, loin du dock
@@ -429,7 +488,7 @@ gboolean Poll(gpointer) {
         mouseDown = false;
     }
     Rect m = GeometryOf(Monitor());
-    int cx = (m.l + m.r) / 2, half = g_cfg.width / 2;
+    int cx = CenterOf(m, StateW(g_state)), half = g_cfg.width / 2;
     bool fullscreen = ForegroundIsFullscreen();
     // Un vrai bord : pas d'autre écran juste au-dessus.
     bool atTopEdge = py <= m.t + 1 && py >= m.t - 2 && px >= cx - half && px <= cx + half && !AnyMonitorContains(px, m.t - 1);
@@ -620,6 +679,22 @@ void TogglePinFromMenu() {
 
 const Config& Cfg() { return g_cfg; }
 
+void BeginDrag() {
+    if (g_dragging || g_state == State::Hidden) return;
+    int x, y;
+    bool left, right;
+    Pointer(x, y, left, &right);
+    if (!right || !PointerKnown()) return;
+    if (g_anim.active) { // on saisit le dock en pleine animation : elle s'arrête, il prend sa taille finale
+        g_anim.active = false;
+        PlaceWindow(TargetRect(g_state));
+    }
+    g_dragging = true;
+    g_dragStartX = x;
+    g_dragStartOffset = g_cfg.dockX;
+    g_dragSince = NowMs();
+}
+
 void ApplyConfig(const std::string& payload) {
     Config c = g_cfg;
     bool autostartOn = autostart::Enabled(), wantAutostart = autostartOn;
@@ -635,6 +710,7 @@ void ApplyConfig(const std::string& payload) {
         else if (k == "hideDelay") c.hideDelay = std::clamp(n, 150, 10000);
         else if (k == "width") c.width = std::clamp(n, 480, 1200);
         else if (k == "panelH") c.panelH = std::clamp(n, 320, 900);
+        else if (k == "dockX") c.dockX = g_dragging ? g_cfg.dockX : std::clamp(n, -4000, 4000); // pas d'écho périmé pendant un déplacement
         else if (k == "theme") c.dark = v != "light";
         else if (k == "sound") c.sound = v == "1";
         else if (k == "autostart") wantAutostart = v == "1";
@@ -642,10 +718,10 @@ void ApplyConfig(const std::string& payload) {
         else if (k == "voiceWake") wantVoice = v == "1";
         else if (k == "voiceModel") wantModel = v;
     }
-    bool geometryChanged = c.mode != g_cfg.mode || c.width != g_cfg.width || c.panelH != g_cfg.panelH;
+    bool geometryChanged = c.mode != g_cfg.mode || c.width != g_cfg.width || c.panelH != g_cfg.panelH || c.dockX != g_cfg.dockX;
     if (!wantModel.empty()) voice::SetModel(wantModel); // avant Apply : l'écoute démarre avec le bon modèle
     if (wantVoice >= 0) voice::Apply(wantVoice == 1);
-    bool widthChanged = c.width != g_cfg.width;
+    bool widthChanged = c.width != g_cfg.width || c.dockX != g_cfg.dockX;
     g_cfg = c;
     if (wantAutostart != autostartOn) autostart::Set(wantAutostart);
     if (widthChanged) RebuildEdges();

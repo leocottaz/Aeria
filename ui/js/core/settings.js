@@ -13,6 +13,7 @@ const ACCENTS = {
 
 const DEFAULTS = {
   mode: 0, revealDelay: 550, hideDelay: 700, fullscreenReveal: false, width: 680, panelH: 540, flare: 18,
+  dockX: 0, // décalage horizontal du dock par rapport au centre de l'écran (px), réglé en le glissant avec le clic droit
   theme: 'dark', accent: 'violet', reduceMotion: false, sound: true, autostart: false, lowMemory: true,
   backend: 'pro', ccModel: 'default',
   category: 'claude', claudeMode: 'pro', // catégorie de connexion (Claude, ChatGPT, Gratuit) ; claudeMode = dernier mode Claude
@@ -28,8 +29,8 @@ const DEFAULTS = {
   model: 'auto', effort: 'low', customInstr: '', lastTab: 'claude', settingsPage: 'aeria',
   updateCheck: true, updateSkipped: '', // mises à jour : vérification automatique, version ignorée (« v1.2.3 »)
 };
-const NUMERIC = new Set(['mode', 'revealDelay', 'hideDelay', 'width', 'panelH', 'flare']);
-const NATIVE_KEYS = new Set(['mode', 'revealDelay', 'hideDelay', 'width', 'panelH', 'theme', 'sound', 'autostart', 'lyricsOpen', 'miniLyrics', 'musicReveal', 'fullscreenReveal', 'voiceWake', 'voiceModel']);
+const NUMERIC = new Set(['mode', 'revealDelay', 'hideDelay', 'width', 'panelH', 'flare', 'dockX']);
+const NATIVE_KEYS = new Set(['mode', 'revealDelay', 'hideDelay', 'width', 'panelH', 'dockX', 'theme', 'sound', 'autostart', 'lyricsOpen', 'miniLyrics', 'musicReveal', 'fullscreenReveal', 'voiceWake', 'voiceModel']);
 const MODEL_NAMES = { 'claude-opus-5-5': 'Opus 5.5', 'claude-sonnet-5-5': 'Sonnet 5.5', 'claude-haiku-5-5': 'Haiku 5.5' };
 // « Auto » : le modèle suit le réglage Qualité.
 const AUTO_MODELS = { low: 'claude-haiku-5-5', medium: 'claude-sonnet-5-5', high: 'claude-opus-5-5' };
@@ -101,7 +102,7 @@ function setOverrides(next, push = true) {
 function sendConfig() {
   send('config', [
     `mode=${settings.mode}`, `revealDelay=${settings.revealDelay}`, `hideDelay=${settings.hideDelay}`,
-    `width=${settings.width}`, `panelH=${settings.panelH}`, `theme=${settings.theme}`,
+    `width=${settings.width}`, `panelH=${settings.panelH}`, `dockX=${settings.dockX}`, `theme=${settings.theme}`,
     `sound=${eff('sound') ? 1 : 0}`,
     // Avant la réponse du natif, on ignore l'état de la copie locale (le natif garde le démarrage automatique tel quel).
     ...(synced ? [`autostart=${settings.autostart ? 1 : 0}`] : []),

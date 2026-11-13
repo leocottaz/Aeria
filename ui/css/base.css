@@ -75,6 +75,8 @@ body {
   cursor: default;
 }
 
+html.moving, html.moving * { cursor: grabbing !important; } /* clic droit maintenu : le dock suit la souris (dock.js) */
+
 /* Pas d'acrylique (il remplit le rectangle de la fenêtre et ne peut pas être découpé) : la fenêtre est
    transparente et le verre est dessiné par la page, .ambient (dock.css), au bas arrondi. Windows y ajoute
    des bords évasés vers l'écran. Taille du verre par état : --shell-w/--shell-h ; --fl = évasement. */

@@ -28,6 +28,7 @@ struct Config {
     bool sound = true;
     bool miniLyrics = true; // mini-dock des paroles quand le dock est rangé
     bool fullscreenReveal = false; // la souris en haut de l'écran ouvre le dock devant une appli plein écran
+    int dockX = 0;         // décalage horizontal par rapport au centre de l'écran (DIP), réglé en glissant au clic droit
 };
 
 #ifdef _WIN32
@@ -54,6 +55,7 @@ void SetListeningAsync(bool on); // commande vocale : encoche « j'écoute » (i
 void ShowBar();              // replie le panneau sur la barre
 void HideByUser();           // Échap, raccourci… : pas de réapparition tant que la souris reste en haut
 void SetPinned(bool pinned); // garder affiché
+void BeginDrag();            // la page a vu un clic droit sur le dock : tant que le bouton reste enfoncé, le dock suit la souris (horizontalement)
 void HoldFor(int ms);        // empêche le repli automatique pendant ms
 void RevealBriefly(int ms);  // fait descendre la barre (rappel qui sonne, minuteur…)
 void RevealMusic(int ms, int widthDip); // nouveau morceau : seulement la carte musique (largeur selon le titre)

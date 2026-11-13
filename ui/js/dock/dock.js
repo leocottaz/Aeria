@@ -205,9 +205,19 @@ function setupGlobal() {
     g.style.setProperty('--mx', `${e.clientX - r.left}px`);
     g.style.setProperty('--my', `${e.clientY - r.top}px`);
   }, { passive: true });
+  // Là où le menu du clic droit sert (copier / coller, texte du chat, notes), il reste ; ailleurs, le clic droit
+  // maintenu déplace le dock le long du bord haut (le natif suit la souris, puis renvoie `dockx`, voir main.js).
+  const TEXT_AREAS = 'input, textarea, .md, .bubble, .ne-body';
   document.addEventListener('contextmenu', (e) => {
-    if (!e.target.closest('input, textarea, .md, .bubble, .ne-body')) e.preventDefault();
+    if (!e.target.closest(TEXT_AREAS)) e.preventDefault();
   });
+  document.addEventListener('pointerdown', (e) => {
+    if (e.button !== 2 || e.target.closest(TEXT_AREAS)) return;
+    document.documentElement.classList.add('moving');
+    send('dockdrag');
+  });
+  const stopMoving = () => document.documentElement.classList.remove('moving');
+  for (const ev of ['pointerup', 'pointercancel', 'blur']) addEventListener(ev, stopMoving);
 }
 
 export { setState, switchTab, openTab, TABS, tick, setupBar, setupGlobal, onWheel };
